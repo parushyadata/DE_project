@@ -23,12 +23,12 @@
 ## Team Members
 
 | Name | GitHub Handle | Email |
-| Aranav Chhabra | --- | aranav.c25676@nst.rishihood.edu.in |
+| Aranav Chhabra | @Aranavchhabra | aranav.c25676@nst.rishihood.edu.in |
 | Parushya Data | @parushyadata | parushyadata@gmail.com |
 | Anjana Kamle | @AnjanaKamle | anjana.k25059@nst.rishihood.edu.in |
-| User 7217 | @user7217 |sriharsha.m25456@nst.rishihood.edu.in|
+| Sriharsha Mallavarapu | @user7217 |sriharsha.m25456@nst.rishihood.edu.in|
 
-**Team No.:** ____ · **Section:** ____ · **Repository URL:** ____
+**Team No.:** T0111 · **Section:** ____ · **Repository URL:** ____
 
 ---
 
