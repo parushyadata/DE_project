@@ -1,27 +1,32 @@
-
 {
-  "team_name": "ItsMeAgain",
+  "team_number": "T0111",
+  "group_lead": {
+    "name": "Aranav Chhabra",
+    "enrollment_no": "",
+    "github": "Aranavchhabra"
+  },
   "members": [
     {
       "name": "Parushya Data",
-      "email": "parushyadata@gmail.com",
-      "github_handle": "parushyadata"
+      "enrollment_no": "",
+      "github": "parushyadata"
     },
     {
       "name": "Anjana Kamle",
-      "email": "anjana.k25059@nst.rishihood.edu.in",
-      "github_handle": "AnjanaKamle"
+      "enrollment_no": "2501010059",
+      "github": "AnjanaKamle"
     },
     {
       "name": "Sriharsha Mallavarapu",
-      "email": "sriharsha.m25456@nst.rishihood.edu.in",
-      "github_handle": "user7217"
+      "enrollment_no": "",
+      "github": "user7217"
     },
     {
       "name": "Aranav Chhabra",
-      "email": "aranav.c25676@nst.rishihood.edu.in",
-      "github_handle": "Aranavchhabra"
+      "enrollment_no": "",
+      "github": "Aranavchhabra"
     }
-  ]
+  ],
+  "postgres_version": "18.6",
+  "laptop_used_for_benchmarks": "MacBook Pro"
 }
-

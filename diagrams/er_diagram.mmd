@@ -1,0 +1,131 @@
+erDiagram
+    AIRPORTS {
+        char3 iata_code PK
+        text airport_name
+        text city_name
+        char2 country_code
+    }
+
+    AIRLINES {
+        varchar2 airline_code PK
+        text airline_name
+    }
+
+    FLIGHTS {
+        bigint flight_id PK
+        varchar2 airline_code FK
+        char3 origin FK
+        char3 destination FK
+        text flight_no
+        timestamptz departure_at
+        timestamptz arrival_at
+        text aircraft
+        int total_seats
+        numeric base_fare
+        text status
+    }
+
+    HOTELS {
+        bigint hotel_id PK
+        text hotel_name
+        text city_name
+        smallint star_rating
+        numeric user_rating
+        jsonb amenities
+        time check_in_time
+        time check_out_time
+    }
+
+    ROOM_TYPES {
+        bigint room_type_id PK
+        bigint hotel_id FK
+        text room_name
+        smallint max_guests
+        numeric price_per_night
+        int total_rooms
+    }
+
+    CUSTOMERS {
+        bigint customer_id PK
+        text full_name
+        text email UK
+        text phone
+        text loyalty_tier
+        timestamptz created_at
+    }
+
+    COUPONS {
+        text coupon_code PK
+        text applies_to
+        numeric discount_pct
+        numeric max_discount
+        date valid_from
+        date valid_to
+    }
+
+    BOOKINGS {
+        bigint booking_id PK
+        text booking_ref UK
+        bigint customer_id FK
+        text booking_type
+        timestamptz booked_at
+        numeric total_amount
+        text coupon_code FK
+        numeric discount
+        text payment_method
+        text status
+        timestamptz cancelled_at
+        numeric refund_amount
+    }
+
+    FLIGHT_BOOKINGS {
+        bigint booking_id PK, FK
+        bigint flight_id FK
+        text cabin
+        int passengers
+        numeric fare_paid
+    }
+
+    PASSENGERS {
+        bigint booking_id PK, FK
+        smallint seq_no PK
+        text full_name
+        smallint age
+        char gender
+        text seat_no
+    }
+
+    HOTEL_BOOKINGS {
+        bigint booking_id PK, FK
+        bigint hotel_id FK
+        bigint room_type_id FK
+        date check_in
+        date check_out
+        int rooms
+        int guests
+        text room_number
+    }
+
+    HOTEL_REVIEWS {
+        bigint review_id PK
+        bigint booking_id FK
+        bigint hotel_id FK
+        smallint rating
+        text title
+        text review_text
+        timestamptz created_at
+    }
+
+    AIRPORTS ||--o{ FLIGHTS : origin
+    AIRPORTS ||--o{ FLIGHTS : destination
+    AIRLINES ||--o{ FLIGHTS : operates
+    HOTELS ||--o{ ROOM_TYPES : offers
+    CUSTOMERS ||--o{ BOOKINGS : makes
+    COUPONS o|--o{ BOOKINGS : applies_to
+    BOOKINGS ||--o| FLIGHT_BOOKINGS : flight_details
+    FLIGHTS ||--o{ FLIGHT_BOOKINGS : selected_for
+    FLIGHT_BOOKINGS ||--|{ PASSENGERS : contains
+    BOOKINGS ||--o| HOTEL_BOOKINGS : hotel_details
+    HOTELS ||--o{ HOTEL_BOOKINGS : receives
+    ROOM_TYPES ||--o{ HOTEL_BOOKINGS : selected_for
+    HOTEL_BOOKINGS ||--o{ HOTEL_REVIEWS : receives
