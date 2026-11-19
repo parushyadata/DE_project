@@ -1,13 +1,13 @@
 === W05 run 1 ===
-Update on hotel_bookings hb  (cost=0.58..117.72 rows=0 width=0) (actual time=1.055..1.055 rows=0.00 loops=1)
-  Buffers: shared hit=1437 dirtied=92 written=1
-  ->  Nested Loop  (cost=0.58..117.72 rows=1 width=44) (actual time=0.014..0.262 rows=89.00 loops=1)
-        Buffers: shared hit=353
-        ->  Index Scan using idx_hotel_bookings_unassigned_checkin on hotel_bookings hb  (cost=0.28..26.24 rows=11 width=14) (actual time=0.007..0.053 rows=101.00 loops=1)
+Update on hotel_bookings hb  (cost=0.58..117.72 rows=0 width=0) (actual time=0.618..0.618 rows=0.00 loops=1)
+  Buffers: shared hit=1258 read=3 dirtied=1
+  ->  Nested Loop  (cost=0.58..117.72 rows=1 width=44) (actual time=0.039..0.299 rows=89.00 loops=1)
+        Buffers: shared hit=350 read=3
+        ->  Index Scan using idx_hotel_bookings_unassigned_checkin on hotel_bookings hb  (cost=0.28..26.24 rows=11 width=14) (actual time=0.031..0.106 rows=101.00 loops=1)
               Index Cond: (check_in = '2026-07-01'::date)
               Filter: (room_number IS NULL)
               Index Searches: 1
-              Buffers: shared hit=50
+              Buffers: shared hit=47 read=3
         ->  Index Scan using bookings_pkey on bookings b  (cost=0.29..8.31 rows=1 width=14) (actual time=0.002..0.002 rows=0.88 loops=101)
               Index Cond: (booking_id = hb.booking_id)
               Filter: (status = 'CONFIRMED'::text)
@@ -15,15 +15,15 @@ Update on hotel_bookings hb  (cost=0.58..117.72 rows=0 width=0) (actual time=1.0
               Index Searches: 101
               Buffers: shared hit=303
 Planning:
-  Buffers: shared hit=359
-Planning Time: 0.534 ms
-Execution Time: 1.095 ms
+  Buffers: shared hit=349
+Planning Time: 0.496 ms
+Execution Time: 0.659 ms
 === W05 run 2 ===
-Update on hotel_bookings hb  (cost=0.58..117.72 rows=0 width=0) (actual time=0.625..0.626 rows=0.00 loops=1)
-  Buffers: shared hit=1442 dirtied=1 written=1
-  ->  Nested Loop  (cost=0.58..117.72 rows=1 width=44) (actual time=0.017..0.259 rows=89.00 loops=1)
+Update on hotel_bookings hb  (cost=0.58..117.72 rows=0 width=0) (actual time=0.549..0.549 rows=0.00 loops=1)
+  Buffers: shared hit=1434 dirtied=1
+  ->  Nested Loop  (cost=0.58..117.72 rows=1 width=44) (actual time=0.015..0.255 rows=89.00 loops=1)
         Buffers: shared hit=353
-        ->  Index Scan using idx_hotel_bookings_unassigned_checkin on hotel_bookings hb  (cost=0.28..26.24 rows=11 width=14) (actual time=0.009..0.082 rows=101.00 loops=1)
+        ->  Index Scan using idx_hotel_bookings_unassigned_checkin on hotel_bookings hb  (cost=0.28..26.24 rows=11 width=14) (actual time=0.008..0.087 rows=101.00 loops=1)
               Index Cond: (check_in = '2026-07-01'::date)
               Filter: (room_number IS NULL)
               Index Searches: 1
@@ -35,15 +35,15 @@ Update on hotel_bookings hb  (cost=0.58..117.72 rows=0 width=0) (actual time=0.6
               Index Searches: 101
               Buffers: shared hit=303
 Planning:
-  Buffers: shared hit=358
-Planning Time: 0.537 ms
-Execution Time: 0.667 ms
+  Buffers: shared hit=348
+Planning Time: 0.479 ms
+Execution Time: 0.591 ms
 === W05 run 3 ===
-Update on hotel_bookings hb  (cost=0.58..117.72 rows=0 width=0) (actual time=0.662..0.662 rows=0.00 loops=1)
-  Buffers: shared hit=1467 dirtied=1 written=1
-  ->  Nested Loop  (cost=0.58..117.72 rows=1 width=44) (actual time=0.016..0.269 rows=89.00 loops=1)
+Update on hotel_bookings hb  (cost=0.58..117.72 rows=0 width=0) (actual time=0.565..0.565 rows=0.00 loops=1)
+  Buffers: shared hit=1434 dirtied=1
+  ->  Nested Loop  (cost=0.58..117.72 rows=1 width=44) (actual time=0.018..0.259 rows=89.00 loops=1)
         Buffers: shared hit=353
-        ->  Index Scan using idx_hotel_bookings_unassigned_checkin on hotel_bookings hb  (cost=0.28..26.24 rows=11 width=14) (actual time=0.009..0.087 rows=101.00 loops=1)
+        ->  Index Scan using idx_hotel_bookings_unassigned_checkin on hotel_bookings hb  (cost=0.28..26.24 rows=11 width=14) (actual time=0.011..0.089 rows=101.00 loops=1)
               Index Cond: (check_in = '2026-07-01'::date)
               Filter: (room_number IS NULL)
               Index Searches: 1
@@ -55,6 +55,6 @@ Update on hotel_bookings hb  (cost=0.58..117.72 rows=0 width=0) (actual time=0.6
               Index Searches: 101
               Buffers: shared hit=303
 Planning:
-  Buffers: shared hit=358
-Planning Time: 0.557 ms
-Execution Time: 0.703 ms
+  Buffers: shared hit=348
+Planning Time: 0.470 ms
+Execution Time: 0.605 ms

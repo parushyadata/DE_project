@@ -1,0 +1,45 @@
+=== R03 run 1 ===
+Limit  (cost=196.01..196.01 rows=1 width=36) (actual time=0.235..0.236 rows=20.00 loops=1)
+  Buffers: shared hit=139
+  ->  Sort  (cost=196.01..196.01 rows=1 width=36) (actual time=0.234..0.235 rows=20.00 loops=1)
+        Sort Key: user_rating DESC NULLS LAST
+        Sort Method: top-N heapsort  Memory: 27kB
+        Buffers: shared hit=139
+        ->  Seq Scan on hotels  (cost=0.00..196.00 rows=1 width=36) (actual time=0.006..0.212 rows=98.00 loops=1)
+              Filter: ((star_rating >= 4) AND (city_name = 'Goa'::text) AND ((amenities ->> 'pool'::text) = 'true'::text))
+              Rows Removed by Filter: 2902
+              Buffers: shared hit=136
+Planning:
+  Buffers: shared hit=99
+Planning Time: 0.165 ms
+Execution Time: 0.246 ms
+=== R03 run 2 ===
+Limit  (cost=196.01..196.01 rows=1 width=36) (actual time=0.222..0.223 rows=20.00 loops=1)
+  Buffers: shared hit=139
+  ->  Sort  (cost=196.01..196.01 rows=1 width=36) (actual time=0.222..0.222 rows=20.00 loops=1)
+        Sort Key: user_rating DESC NULLS LAST
+        Sort Method: top-N heapsort  Memory: 27kB
+        Buffers: shared hit=139
+        ->  Seq Scan on hotels  (cost=0.00..196.00 rows=1 width=36) (actual time=0.006..0.200 rows=98.00 loops=1)
+              Filter: ((star_rating >= 4) AND (city_name = 'Goa'::text) AND ((amenities ->> 'pool'::text) = 'true'::text))
+              Rows Removed by Filter: 2902
+              Buffers: shared hit=136
+Planning:
+  Buffers: shared hit=99
+Planning Time: 0.145 ms
+Execution Time: 0.233 ms
+=== R03 run 3 ===
+Limit  (cost=196.01..196.01 rows=1 width=36) (actual time=0.214..0.215 rows=20.00 loops=1)
+  Buffers: shared hit=139
+  ->  Sort  (cost=196.01..196.01 rows=1 width=36) (actual time=0.214..0.214 rows=20.00 loops=1)
+        Sort Key: user_rating DESC NULLS LAST
+        Sort Method: top-N heapsort  Memory: 27kB
+        Buffers: shared hit=139
+        ->  Seq Scan on hotels  (cost=0.00..196.00 rows=1 width=36) (actual time=0.005..0.193 rows=98.00 loops=1)
+              Filter: ((star_rating >= 4) AND (city_name = 'Goa'::text) AND ((amenities ->> 'pool'::text) = 'true'::text))
+              Rows Removed by Filter: 2902
+              Buffers: shared hit=136
+Planning:
+  Buffers: shared hit=99
+Planning Time: 0.136 ms
+Execution Time: 0.224 ms

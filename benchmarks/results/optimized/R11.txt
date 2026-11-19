@@ -2,41 +2,41 @@
 Sort  (cost=17.10..17.29 rows=77 width=39) (actual time=0.033..0.035 rows=92.00 loops=1)
   Sort Key: booked_at
   Sort Method: quicksort  Memory: 30kB
-  Buffers: shared hit=10 dirtied=1
-  ->  Index Scan using idx_bookings_pending_booking_id on bookings  (cost=0.14..14.68 rows=77 width=39) (actual time=0.005..0.022 rows=92.00 loops=1)
+  Buffers: shared hit=6 read=1
+  ->  Index Scan using idx_bookings_pending_booking_id on bookings  (cost=0.14..14.68 rows=77 width=39) (actual time=0.012..0.021 rows=92.00 loops=1)
         Filter: (booked_at < ('2026-06-30 23:59:00+05:30'::timestamp with time zone - '00:30:00'::interval))
         Rows Removed by Filter: 5
         Index Searches: 1
-        Buffers: shared hit=7 dirtied=1
+        Buffers: shared hit=3 read=1
 Planning:
-  Buffers: shared hit=179
-Planning Time: 0.337 ms
-Execution Time: 0.049 ms
+  Buffers: shared hit=177
+Planning Time: 0.277 ms
+Execution Time: 0.048 ms
 === R11 run 2 ===
-Sort  (cost=17.10..17.29 rows=77 width=39) (actual time=0.025..0.026 rows=92.00 loops=1)
+Sort  (cost=17.10..17.29 rows=77 width=39) (actual time=0.024..0.026 rows=92.00 loops=1)
   Sort Key: booked_at
   Sort Method: quicksort  Memory: 30kB
   Buffers: shared hit=7
-  ->  Index Scan using idx_bookings_pending_booking_id on bookings  (cost=0.14..14.68 rows=77 width=39) (actual time=0.005..0.012 rows=92.00 loops=1)
+  ->  Index Scan using idx_bookings_pending_booking_id on bookings  (cost=0.14..14.68 rows=77 width=39) (actual time=0.004..0.013 rows=92.00 loops=1)
         Filter: (booked_at < ('2026-06-30 23:59:00+05:30'::timestamp with time zone - '00:30:00'::interval))
         Rows Removed by Filter: 5
         Index Searches: 1
         Buffers: shared hit=4
 Planning:
-  Buffers: shared hit=179
-Planning Time: 0.347 ms
-Execution Time: 0.041 ms
+  Buffers: shared hit=177
+Planning Time: 0.246 ms
+Execution Time: 0.038 ms
 === R11 run 3 ===
-Sort  (cost=17.10..17.29 rows=77 width=39) (actual time=0.025..0.027 rows=92.00 loops=1)
+Sort  (cost=17.10..17.29 rows=77 width=39) (actual time=0.024..0.026 rows=92.00 loops=1)
   Sort Key: booked_at
   Sort Method: quicksort  Memory: 30kB
   Buffers: shared hit=7
-  ->  Index Scan using idx_bookings_pending_booking_id on bookings  (cost=0.14..14.68 rows=77 width=39) (actual time=0.005..0.013 rows=92.00 loops=1)
+  ->  Index Scan using idx_bookings_pending_booking_id on bookings  (cost=0.14..14.68 rows=77 width=39) (actual time=0.004..0.013 rows=92.00 loops=1)
         Filter: (booked_at < ('2026-06-30 23:59:00+05:30'::timestamp with time zone - '00:30:00'::interval))
         Rows Removed by Filter: 5
         Index Searches: 1
         Buffers: shared hit=4
 Planning:
-  Buffers: shared hit=179
-Planning Time: 0.351 ms
-Execution Time: 0.041 ms
+  Buffers: shared hit=177
+Planning Time: 0.249 ms
+Execution Time: 0.037 ms

@@ -1,355 +1,281 @@
 # CP3: Query Optimization Report
 
-## 1. Objective
+## 1. Summary
 
-CP3 focused on optimizing the MakeMyTrip PostgreSQL workload while preserving query correctness.
+All 30 workload queries were benchmarked **before and after optimization on the same laptop, same PostgreSQL build and same freshly loaded seed data**, using `benchmarks/run_benchmark.sh` (3 runs each, average reported).
 
-The workload contains 25 read queries (R01-R25) and 5 write queries (W01-W05).
+- Workload total: **1,657.758 ms → 217.772 ms (−86.9%, 7.6×)**. R19 alone accounts for 1,345 ms of the saving; without R19 the total goes 307.090 → 212.160 ms (−30.9%).
+- **18 queries are measurably faster**: every optimized run is below every baseline run *and* the plan changed because of an index or rewrite.
+- **12 queries show no attributable change**. 9 have overlapping run ranges; R12, R14 and R15 are slightly lower with an identical plan, so the difference is run-to-run variance, not an optimization.
+- **R13 returned a wrong answer** (0 rows) because of `NOT IN` with NULLs; the rewrite returns the correct 10 rows.
+- Every other query returns exactly the same output as the original (byte-identical result, md5 compared).
 
-The approach included execution-plan analysis, targeted indexing, query rewrites, and avoiding unnecessary indexes.
+## 2. Changes in this revision
 
-## 2. Benchmark methodology
+An earlier version of this report compared the CP2 baseline numbers (measured by three members on different laptops) with optimized numbers measured on a fourth setup. That mixes machine speed into the "improvement": for example R15 and R12 were reported 56% and 27% faster with **no change applied**, and on the same machine they are not measurably faster. This revision:
 
-Both workloads were executed three times using the project's benchmark script.
+1. **Re-measures the baseline on the same machine as the optimized run** (`benchmarks/results/baseline_rerun/`). The CP2 deliverable in `benchmarks/results/baseline/` is unchanged; §12 shows both.
+2. **R25 rewrite made exactly equivalent.** The previous rewrite added `departure_at >= booked_at`, which changes the query's meaning (a booking made after departure would drop out). It returned the same rows only because the seed data has no such booking. Now: `departure_at < booked_at + interval '24 hours'`, identical to the original condition.
+3. **`sql/06_optimized_queries.sql` safety fix.** Its `ROLLBACK;` had been moved to directly after `BEGIN;`, so running the file with `psql -f` would have **committed** W01–W05. `ROLLBACK;` and the `-- @END` marker are back at the end.
+4. **New index for W04** (`idx_flights_open_departure`), which also speeds up R08 and R10.
+5. Corrected index comments (R21's partial index covers ~23% of passengers, not ~8%; there are 40,000 customers, not 50,000).
 
-Baseline: `./benchmarks/run_benchmark.sh capstone baseline 3 queries/workload_30.sql`
+## 3. Method and environment
 
-Optimized: `./benchmarks/run_benchmark.sh capstone optimized 3 sql/06_optimized_queries.sql`
+| Item | Value |
+|---|---|
+| PostgreSQL | 18.6 (conda-forge build), **default server settings**, throwaway local cluster |
+| Machine | Apple M4, 16 GB (Sriharsha's laptop) |
+| Data | `seed_data.zip` loaded with `sql/01_schema.sql` + `sql/02_load_data.sql` (ends with `ANALYZE`) into a fresh database |
+| Baseline | `./benchmarks/run_benchmark.sh mmt baseline 3 queries/workload_30.sql` on the fresh database, PK/UNIQUE indexes only |
+| Optimized | database rebuilt from scratch, then `sql/05_indexes.sql`, then `./benchmarks/run_benchmark.sh mmt optimized 3 sql/06_optimized_queries.sql` |
+| Timing | `EXPLAIN (ANALYZE, BUFFERS)` `Execution Time`, 3 runs, average; writes inside `BEGIN … ROLLBACK` |
 
-Read queries were inspected using `EXPLAIN (ANALYZE, BUFFERS)`. Write queries were wrapped in transactions and rolled back to avoid permanently changing data during benchmarking.
+Both runs used the unmodified project script. No `VACUUM` was run in either (it is not in `05_indexes.sql`; see §9). The README's example uses 5 runs; CHECKPOINTS.md specifies 3, which is what both runs used.
 
-All execution times are in milliseconds. Speedup = baseline average / optimized average.
-Improvement % = (before − after) / before × 100.
+**"Measurably faster"** in this report means all three optimized runs are below all three baseline runs *and* the plan changed. Raw plans of every run: `benchmarks/results/baseline_rerun/*.txt` and `benchmarks/results/optimized/*.txt`.
 
-## 3. Benchmark results
+## 4. Results
 
-| Query | Type | Before (ms) | Problem found in the plan | Optimization applied | After (ms) | Improvement | Same result? |
-|-------|------|------------:|---------------------------|----------------------|-----------:|------------:|:------------:|
-| R01 | READ | 8.588 | Seq Scan on flights with DATE() preventing index use | `idx_flight_bookings_flight_booking` for join acceleration | 1.652 | 80.8% (5.2×) | ✅ |
-| R02 | READ | 0.853 | Seq Scan on flights (small result set, already fast) | No change needed | 0.918 | −7.6% | ✅ |
-| R03 | READ | 0.268 | Seq Scan on hotels (small table, already sub-ms) | No change needed | 0.251 | 6.3% | ✅ |
-| R04 | READ | 2.360 | Seq Scan on hotel_bookings | No change needed (small result set) | 2.489 | −5.5% | ✅ |
-| R05 | READ | 6.194 | Seq Scan on bookings for customer filter | No change needed (single customer lookup) | 6.221 | −0.4% | ✅ |
-| R06 | READ | 0.037 | Already uses unique index on booking_ref | No change needed | 0.036 | 2.7% | ✅ |
-| R07 | READ | 2.080 | Seq Scan on flight_bookings for flight lookup | `idx_flight_bookings_flight_booking` enables Index Only Scan | 0.098 | 95.3% (21.2×) | ✅ |
-| R08 | READ | 6.937 | Seq Scan on flight_bookings | `idx_flight_bookings_flight_booking` for flight join | 1.837 | 73.5% (3.8×) | ✅ |
-| R09 | READ | 16.017 | Date range scan on bookings | `idx_bookings_booked_at_desc` for date range filter | 7.711 | 51.8% (2.1×) | ✅ |
-| R10 | READ | 0.676 | Seq Scan on flights (filtering by status) | No change needed (already sub-ms) | 0.662 | 2.1% | ✅ |
-| R11 | READ | 15.151 | Parallel Seq Scan on all 144,792 bookings to find 92 pending rows | `idx_bookings_pending_booking_id` partial index (16 kB, 97 rows) | 0.044 | 99.7% (344.3×) | ✅ |
-| R12 | READ | 32.013 | Seq Scan on bookings (must read most rows for yearly aggregation) | No change — full-year aggregation requires most rows | 23.488 | 26.6% (1.4×) | ✅ |
-| R13 | READ | 155.227 | `NOT IN` with NULLs returns **wrong answer** (0 rows instead of 10) | Rewrite: `NOT EXISTS` fixes NULL semantics | 7.949 | 94.9% (19.5×) | ✅ (fixed) |
-| R14 | READ | 70.712 | Seq Scan on flight_bookings for multi-table join | `idx_flight_bookings_flight_booking` used for join | 25.627 | 63.8% (2.8×) | ✅ |
-| R15 | READ | 33.995 | Sequential scans with hash joins (efficient for data volume) | No change — hash joins already optimal for large result | 14.881 | 56.2% (2.3×) | ✅ |
-| R16 | READ | 134.060 | 4-way join with seq scans on all tables | `idx_flight_bookings_flight_booking` for Index Only Scan on join | 59.370 | 55.7% (2.3×) | ✅ |
-| R17 | READ | 41.631 | Seq Scan on bookings, heap access for each row | `idx_bookings_completed_date_customer` covering index → Index Only Scan | 11.295 | 72.9% (3.7×) | ✅ |
-| R18 | READ | 6.289 | Seq Scan on hotel_reviews evaluating ILIKE on all 15,913 rows | `idx_hotel_reviews_text_trgm` GIN trigram index → Bitmap Index Scan | 1.455 | 76.9% (4.3×) | ✅ |
-| R19 | READ | 2867.697 | Correlated subquery: Seq Scan on flight_bookings (84,899 rows) repeated 720 times = 527,878 buffer hits | `idx_flight_bookings_flight_booking` → Index Only Scan (7 rows/loop), 16,694 buffer hits | 4.381 | 99.8% (654.6×) | ✅ |
-| R20 | READ | 13.101 | `booked_at::date` cast prevents index use; Parallel Seq Scan on 2,049 pages | Rewrite: sargable `TIMESTAMPTZ` range + `idx_bookings_booked_at_desc` → Index Only Scan on 28 pages | 1.042 | 92.0% (12.6×) | ✅ |
-| R21 | READ | 19.945 | Seq Scan on passengers for age filter | `idx_passengers_senior_booking` partial index (age >= 60) | 12.445 | 37.6% (1.6×) | ✅ |
-| R22 | READ | 33.906 | Full table sort for OFFSET 100000 pagination | `idx_bookings_booked_at_desc` avoids full sort | 8.818 | 74.0% (3.8×) | ✅ |
-| R23 | READ | 3.675 | Seq Scan evaluating lower() on all 50,000 customers | `idx_customers_lower_email` expression index | 0.026 | 99.3% (141.3×) | ✅ |
-| R24 | READ | 1.607 | Seq Scan on hotels and hotel_reviews (small result set) | No change needed (already fast) | 1.581 | 1.6% | ✅ |
-| R25 | READ | 20.164 | Date range join across bookings and flights | Rewrite: added `departure_at >= booked_at` guard + `idx_bookings_booked_at_desc` | 15.119 | 25.0% (1.3×) | ✅ |
-| W01 | WRITE | 0.364 | Simple INSERT (already sub-ms) | No change needed | 0.465 | −27.7% | ✅ |
-| W02 | WRITE | 9.741 | Seq Scan to find MIN(booking_id) among pending bookings | `idx_bookings_pending_booking_id` → Index Only Scan | 0.221 | 97.7% (44.1×) | ✅ |
-| W03 | WRITE | 0.166 | Already uses unique index on booking_ref | No change needed | 0.195 | −17.5% | ✅ |
-| W04 | WRITE | 0.953 | Seq Scan on flights (small update set) | No change needed | 1.007 | −5.7% | ✅ |
-| W05 | WRITE | 2.537 | Seq Scan on hotel_bookings for unassigned rooms | `idx_hotel_bookings_unassigned_checkin` partial index | 0.822 | 67.6% (3.1×) | ✅ |
-| **Total** | | **3522.527** | | | **211.573** | **94.0%** | |
+Before = same-machine baseline. Improvement = (before − after) / before × 100. Positive = lower time; for "no measurable change" rows the sign only shows which way the averages moved.
 
-## 4. Indexes introduced
+| Query | Before (ms) | Problem found in the plan | Optimization applied | After (ms) | Improvement | Same result? |
+|-------|------------:|---------------------------|----------------------|-----------:|------------:|:------------:|
+| R01 | 5.110 | Seq Scan on all 84,899 `flight_bookings` rows to join the matching flights | `idx_flight_bookings_flight_booking (flight_id, booking_id)`: index lookups per flight | 1.095 | **78.6%** (4.7×) | ✅ identical |
+| R02 | 0.737 | Seq Scan on `flights` (13,848 rows), already < 1 ms | None | 0.760 | no measurable change (-3.1%, runs overlap) | ✅ identical |
+| R03 | 0.234 | Seq Scan on `hotels` (3,000 rows), already < 1 ms | None | 0.229 | no measurable change (+2.3%, runs overlap) | ✅ identical |
+| R04 | 1.998 | Seq Scan on `hotel_bookings` for hotel 208 | None | 1.897 | no measurable change (+5.0%, runs overlap) | ✅ identical |
+| R05 | 6.547 | Seq Scan on `bookings` for customer 1021 (no index on `customer_id`) | None | 6.027 | no measurable change (+7.9%, runs overlap) | ✅ identical |
+| R06 | 0.026 | Already an Index Scan on the UNIQUE `booking_ref` index | None | 0.025 | no measurable change (+3.9%, runs overlap) | ✅ identical |
+| R07 | 2.231 | Seq Scan on `flight_bookings` to find the 9 bookings of flight 13047 | `idx_flight_bookings_flight_booking` → Index Only Scan | 0.097 | **95.6%** (22.9×) | ✅ identical |
+| R08 | 5.897 | Seq Scans on `flights` and `flight_bookings` | `idx_flights_open_departure` (partial, added for W04; `status = 'SCHEDULED'` is implied by its predicate) + `idx_flight_bookings_flight_booking` | 1.223 | **79.3%** (4.8×) | ✅ identical |
+| R09 | 14.212 | Seq Scan on `bookings` for a June 2026 range | `idx_bookings_booked_at_desc` → Index Scan on the date range | 7.735 | **45.6%** (1.8×) | ✅ identical |
+| R10 | 0.677 | Seq Scan on `flights` for `status = 'DELAYED'` + sort | `idx_flights_open_departure` → Index Scan, already in `departure_at` order | 0.062 | **90.8%** (10.9×) | ✅ identical |
+| R11 | 4.805 | Parallel Seq Scan on 144,792 `bookings` for 92 pending rows | `idx_bookings_pending_booking_id` (partial, 97 rows) | 0.041 | **99.1%** (117.2×) | ✅ identical |
+| R12 | 24.079 | Seq Scan on `bookings`; `EXTRACT(YEAR FROM booked_at)` is not sargable | None | 22.465 | 6.7% lower, same plan: not attributed | ✅ identical |
+| R13 | 12.085 | `NOT IN` against a column with NULLs → returns **0 rows (wrong)** | Rewrite to `NOT EXISTS` (hash anti-join) → correct 10 rows | 7.988 | **33.9%** (1.5×) | ✅ fixed: 0 → 10 rows |
+| R14 | 28.383 | Seq Scans + hash joins over most of 4 tables | None (plan unchanged) | 27.750 | 2.2% lower, same plan: not attributed | ✅ identical |
+| R15 | 15.205 | Seq Scans + hash joins over `bookings`, `hotel_bookings`, `hotels` | None (plan unchanged) | 14.339 | 5.7% lower, same plan: not attributed | ✅ identical |
+| R16 | 62.806 | Seq Scans on 5 tables; aggregates most rows | None (plan unchanged) | 62.177 | no measurable change (+1.0%, runs overlap) | ✅ identical |
+| R17 | 16.668 | Seq Scan on `bookings` for completed 2026 bookings | Index Scan on `idx_bookings_booked_at_desc` (the covering partial index built for R17 is not chosen on a freshly loaded table; see §9) | 13.195 | **20.8%** (1.3×) | ✅ identical |
+| R18 | 2.127 | Seq Scan on `hotel_reviews` evaluating `ILIKE '%breakfast%'` on every row | `idx_hotel_reviews_text_trgm` (GIN, `pg_trgm`) → Bitmap Index Scan | 1.009 | **52.6%** (2.1×) | ✅ identical |
+| R19 | 1350.668 | Correlated subquery: Seq Scan on `flight_bookings` repeated 720 times (84,892 rows removed per loop) | `idx_flight_bookings_flight_booking` → Index Only Scan per loop | 5.612 | **99.6%** (240.7×) | ✅ identical |
+| R20 | 7.157 | `booked_at::date BETWEEN …` cast prevents index use; Seq Scan | Rewrite to a half-open `timestamptz` range + `idx_bookings_booked_at_desc` → Index Only Scan | 1.323 | **81.5%** (5.4×) | ✅ identical |
+| R21 | 19.694 | Seq Scan on all 163,380 `passengers` to filter `age >= 60` | `idx_passengers_senior_booking` (partial, 36,837 rows) → Index Only Scan; the flight_bookings/flights hash join remains | 15.213 | **22.8%** (1.3×) | ✅ identical |
+| R22 | 36.843 | Seq Scan + top-N sort of all 144,792 `bookings` for `OFFSET 100000` | `idx_bookings_booked_at_desc` → Index Scan that stops after 100,025 entries | 8.903 | **75.8%** (4.1×) | ✅ identical |
+| R23 | 4.045 | Seq Scan evaluating `lower(email)` on all 40,000 customers | `idx_customers_lower_email` (expression index) | 0.028 | **99.3%** (144.5×) | ✅ identical |
+| R24 | 1.629 | Seq Scans on small inputs (15,913 reviews, 450 Goa hotels), ~1.6 ms | None (candidate indexes tested and rejected, §9) | 1.539 | no measurable change (+5.5%, runs overlap) | ✅ identical |
+| R25 | 20.153 | Seq Scan on `bookings` for the 2026 filter; the 24-hour condition compares two tables, so it can only be a join filter | `idx_bookings_booked_at_desc` for `booked_at >= '2026-01-01'`; exact-equivalent rewrite of the 24-hour condition (no timing effect) | 15.529 | **22.9%** (1.3×) | ✅ identical |
+| W01 | 0.349 | Single-row INSERT, no read part | None (new `bookings` indexes add maintenance cost) | 0.384 | no measurable change (-10.1%, runs overlap) | ✅ same rows affected |
+| W02 | 9.781 | `min(booking_id)` over pending rows walks `bookings_pkey`, filtering out 144,695 rows | `idx_bookings_pending_booking_id` → Index Only Scan, 1 entry | 0.169 | **98.3%** (57.9×) | ✅ same rows affected |
+| W03 | 0.155 | Already an Index Scan on the UNIQUE `booking_ref` index | None | 0.165 | no measurable change (-6.2%, runs overlap) | ✅ same rows affected |
+| W04 | 0.945 | Seq Scan on `flights` to find 10 open flights before 1 July | `idx_flights_open_departure` (partial, 754 rows) → Index Scan | 0.174 | **81.6%** (5.4×) | ✅ same rows affected |
+| W05 | 2.512 | Seq Scan on `hotel_bookings` for unassigned 1 July check-ins | `idx_hotel_bookings_unassigned_checkin` (partial) → Index Scan | 0.618 | **75.4%** (4.1×) | ✅ same rows affected |
+| **Total** | **1657.758** | | | **217.772** | **86.9%** (7.6×) | |
 
-All indexes are defined in `sql/05_indexes.sql`.
+## 5. Indexes (`sql/05_indexes.sql`)
 
-| Index | Type | Table | Columns | Purpose | Size |
-|-------|------|-------|---------|---------|------|
-| `idx_flight_bookings_flight_booking` | B-tree | flight_bookings (5.6 MB) | `(flight_id, booking_id)` | Flight filtering and booking joins: R19, R07, R08, R14, R16 | 2.6 MB |
-| `idx_bookings_completed_date_customer` | B-tree, partial, covering | bookings (16 MB) | `(booked_at, customer_id) INCLUDE (total_amount) WHERE status = 'COMPLETED'` | Completed-booking aggregation in R17 | 5.2 MB |
-| `idx_hotel_reviews_text_trgm` | GIN (pg_trgm) | hotel_reviews (1.6 MB) | `review_text gin_trgm_ops` | Substring review searches in R18 | 504 kB |
-| `idx_passengers_senior_booking` | B-tree, partial | passengers (9.7 MB) | `(booking_id) WHERE age >= 60` | Senior-passenger filtering in R21 | 776 kB |
-| `idx_bookings_booked_at_desc` | B-tree | bookings (16 MB) | `(booked_at DESC)` | Date filtering and newest-first pagination in R20, R22, R09, R25 | 3.2 MB |
-| `idx_customers_lower_email` | B-tree, expression | customers (4.3 MB) | `lower(email)` | Case-insensitive email lookup in R23 | 2.1 MB |
-| `idx_bookings_pending_booking_id` | B-tree, partial | bookings (16 MB) | `(booking_id) WHERE status = 'PENDING_PAYMENT'` | Pending-payment lookup in R11, W02 | 16 kB |
-| `idx_hotel_bookings_unassigned_checkin` | B-tree, partial | hotel_bookings (4.4 MB) | `(check_in, booking_id) WHERE room_number IS NULL` | Unassigned room lookup in W05 | 232 kB |
+| Index | Type | Definition | Measurably faster | Size |
+|---|---|---|---|---:|
+| `idx_flight_bookings_flight_booking` | B-tree, composite | `flight_bookings (flight_id, booking_id)` | R01, R07, R08, R19 | 2.6 MB |
+| `idx_bookings_completed_date_customer` | B-tree, partial, covering | `bookings (booked_at, customer_id) INCLUDE (total_amount) WHERE status = 'COMPLETED'` | none in this run (see §9) | 5.0 MB |
+| `idx_hotel_reviews_text_trgm` | GIN (`pg_trgm`) | `hotel_reviews USING gin (review_text gin_trgm_ops)` | R18 | 504 kB |
+| `idx_passengers_senior_booking` | B-tree, partial | `passengers (booking_id) WHERE age >= 60` | R21 | 776 kB |
+| `idx_bookings_booked_at_desc` | B-tree | `bookings (booked_at DESC)` | R09, R17, R20, R22, R25 | 3.1 MB |
+| `idx_customers_lower_email` | B-tree, expression | `customers (lower(email))` | R23 | 2.0 MB |
+| `idx_bookings_pending_booking_id` | B-tree, partial | `bookings (booking_id) WHERE status = 'PENDING_PAYMENT'` | R11, W02 | 16 kB |
+| `idx_hotel_bookings_unassigned_checkin` | B-tree, partial | `hotel_bookings (check_in, booking_id) WHERE room_number IS NULL` | W05 | 232 kB |
+| `idx_flights_open_departure` | B-tree, partial | `flights (departure_at) WHERE status IN ('SCHEDULED', 'DELAYED')` | W04, R08, R10 | 40 kB |
 
-**Total index storage: 14.6 MB** (vs 73.3 MB total table data).
+Total: **14 MB of new indexes** against 44 MB of table data.
 
-The review-text index uses PostgreSQL's `pg_trgm` extension and a GIN index because a normal B-tree index is unsuitable for a leading-wildcard search such as `ILIKE '%breakfast%'`.
+Why these shapes:
+- **Equality column first, then the join/range column.** `flight_bookings (flight_id, booking_id)` answers "bookings of flight X" and hands `booking_id` to the next join without reading the table.
+- **Partial indexes for rare states.** Pending payments are 97 of 144,792 bookings; open flights are 754 of 13,848. These indexes are tiny, and rows leave them when their status changes (W02 and W04 move rows out).
+- **Expression index for R23**, because the existing UNIQUE index on `email` cannot answer `lower(email) = …`.
+- **GIN trigram index for R18**: a B-tree cannot serve a leading-wildcard `ILIKE`.
 
-Partial indexes were used where queries consistently filter on specific conditions, such as completed bookings, senior passengers, pending payments, or unassigned rooms.
+## 6. Query rewrites (`sql/06_optimized_queries.sql`)
 
-## 5. Important query rewrites
+Only three queries were rewritten; the other 27 are copied unchanged from `queries/workload_30.sql`.
 
-### R13: Unused coupons — `NOT IN` → `NOT EXISTS` (the wrong-answer query)
-
-> 🔎 This is the query that returns a **wrong answer** due to a subtle SQL rule about NULLs.
-
-The original query used `NOT IN` against booking coupon codes:
+### R13: `NOT IN` → `NOT EXISTS` (the wrong-answer query)
 
 ```sql
--- ORIGINAL (R13): returns 0 rows — WRONG
-SELECT c.coupon_code, c.applies_to, c.discount_pct
-FROM coupons c
+-- original
 WHERE c.coupon_code NOT IN (SELECT b.coupon_code FROM bookings b);
-```
-
-The `bookings.coupon_code` column contains NULL values (bookings without a coupon). When `NOT IN` encounters a NULL in the subquery result, every comparison returns UNKNOWN instead of TRUE or FALSE. The three-valued logic means `x NOT IN (a, b, NULL)` is never TRUE, so the query returns zero rows — hiding all 10 genuinely unused coupons.
-
-**Fix:** Replace `NOT IN` with `NOT EXISTS`, which handles NULLs correctly:
-
-```sql
--- OPTIMIZED (R13): returns 10 rows — CORRECT
-SELECT c.coupon_code, c.applies_to, c.discount_pct
-FROM coupons c
-WHERE NOT EXISTS (
-    SELECT 1
-    FROM bookings b
-    WHERE b.coupon_code = c.coupon_code
-)
+-- rewrite
+WHERE NOT EXISTS (SELECT 1 FROM bookings b WHERE b.coupon_code = c.coupon_code)
 ORDER BY c.coupon_code;
 ```
 
-**Correctness proof:**
+127,144 bookings have `coupon_code IS NULL`. `x NOT IN (…, NULL)` is never TRUE: for a coupon that was never used, every comparison is FALSE except the comparison with NULL, which is UNKNOWN, so the whole predicate is UNKNOWN and the row is filtered out. The original therefore returns **0 rows**. `NOT EXISTS` only asks whether a matching row exists, so NULLs cannot match and the query returns the **10 coupons** that were never used. This was cross-checked with `NOT IN (SELECT coupon_code FROM bookings WHERE coupon_code IS NOT NULL)`, which also gives 10. The rewrite also runs as a hash anti-join: 12.085 → 7.988 ms.
+
+### R20: sargable date range
+
+`booked_at::date BETWEEN '2026-06-01' AND '2026-06-30'` casts every row, so no index on `booked_at` can be used. The rewrite `booked_at >= TIMESTAMPTZ '2026-06-01' AND booked_at < TIMESTAMPTZ '2026-07-01'` selects the same rows (identical output) and runs as an Index Only Scan on `idx_bookings_booked_at_desc`: 7.157 → 1.323 ms.
+
+### R25: exact-equivalent form of the 24-hour condition
+
+`f.departure_at - b.booked_at < interval '24 hours'` was rewritten to `f.departure_at < b.booked_at + interval '24 hours'`, which is the same condition. Because it compares columns from two tables, no index can apply it and the plan keeps it as a hash-join filter. A side test showed no timing difference from the rewrite on its own (15.1 → 14.9 ms, within noise). The measured R25 improvement (20.153 → 15.529 ms) comes from `idx_bookings_booked_at_desc` serving `booked_at >= '2026-01-01'`.
+
+## 7. Proof that results are unchanged
+
+On the optimized database, every original query (from `queries/workload_30.sql`) and its optimized version (from `sql/06_optimized_queries.sql`) were run and their full output compared:
+
+- **Reads:** the complete result, in the order returned, was compared byte for byte. **24 of the 25 reads are identical**, including order, for example R25: 2,935 rows; R19: 720; R17: 3,072; R22: the same 25 rows. **R13 differs intentionally** (0 → 10 rows, §6).
+- **Order:** where a query has `ORDER BY`, identical output means identical order. R22's page is deterministic because `booked_at` is unique (144,792 distinct values).
+- **R25 both directions:** `EXCEPT ALL` original vs rewrite = 0 rows, and rewrite vs original = 0 rows.
+- **Writes:** W01–W05 are unchanged SQL; each affects the same number of rows (1, 1, 1, 10, 89) and is rolled back.
+
+## 8. Before/after plans: 5 biggest improvements
+
+Excerpts from run 3 of each benchmark (costs and buffer lines trimmed).
+
+### R19: 1,350.668 → 5.612 ms (240.7×)
 
 ```
-capstone=# SELECT count(*) FROM coupons c
-           WHERE NOT EXISTS (SELECT 1 FROM bookings b WHERE b.coupon_code = c.coupon_code);
- count
--------
-    10          -- correct: 10 unused coupons
-
-capstone=# SELECT count(*) FROM coupons c
-           WHERE c.coupon_code NOT IN (SELECT b.coupon_code FROM bookings b);
- count
--------
-     0          -- wrong: NULLs suppress all results
-```
-
-Execution time decreased from 155.227 ms to 7.949 ms (19.5× faster).
-
-### R20: Booking counts by day — sargable date range
-
-The original filter cast `booked_at` to date, preventing index use:
-
-```sql
--- ORIGINAL: WHERE booked_at::date BETWEEN '2026-06-01' AND '2026-06-30'
--- The ::date cast is applied to every row → cannot use an index on booked_at
-```
-
-Rewritten as a half-open timestamp range:
-
-```sql
--- OPTIMIZED: WHERE booked_at >= TIMESTAMPTZ '2026-06-01'
---              AND booked_at < TIMESTAMPTZ '2026-07-01'
--- Directly comparable to the indexed booked_at column → Index Only Scan
-```
-
-**Correctness proof (EXCEPT):**
-
-```
-capstone=# (optimized query) EXCEPT (original query);
- -- 0 rows: results are identical
-```
-
-Execution time decreased from 13.101 ms to 1.042 ms (12.6× faster).
-
-### R25: Last-minute flight bookings — correctness guard
-
-The original condition `departure_at - booked_at < interval '24 hours'` also allowed negative differences (departures before booking).
-
-It was corrected to require departure to be at or after booking and strictly before booking plus 24 hours:
-
-```sql
-WHERE f.departure_at >= b.booked_at
-  AND f.departure_at < b.booked_at + interval '24 hours'
-```
-
-A check on the current dataset found no departures before their booking timestamps for the relevant records.
-
-## 6. Before/after EXPLAIN plans (5 biggest improvements)
-
-### R19: 2,867 ms → 4.4 ms (654.6×)
-
-**Before** — Correlated subquery does Seq Scan on flight_bookings 720 times:
-```
-Sort (actual time=2559.779..2559.801 rows=720)
-  → Seq Scan on flights f (actual time=4.452..2559.356 rows=720)
-      Rows Removed by Filter: 13128
-      Buffers: shared hit=527878
+-- before
+->  Seq Scan on flights f (actual time=2.827..1353.166 rows=720 loops=1)
       SubPlan 1
-        → Aggregate (actual time=3.553..3.553 rows=1 loops=720)
-            → Nested Loop
-                → Seq Scan on flight_bookings fb (actual time=3.147..3.532 rows=7 loops=720)
-                      Filter: (flight_id = f.flight_id)
-                      Rows Removed by Filter: 84892     ← scans all 84,899 rows per loop
-                      Buffers: shared hit=513360
-```
-
-**After** — Index Only Scan replaces the repeated seq scan:
-```
-Sort (actual time=8.769..8.792 rows=720)
-  → Seq Scan on flights f
-      Buffers: shared hit=16694
+        ->  Seq Scan on flight_bookings fb (actual time=1.660..1.868 rows=6.64 loops=720)
+              Filter: (flight_id = f.flight_id)
+              Rows Removed by Filter: 84892
+Execution Time: 1353.385 ms
+-- after
+->  Seq Scan on flights f (actual time=0.536..5.506 rows=720 loops=1)
       SubPlan 1
-        → Aggregate (actual time=0.010..0.010 rows=1 loops=720)
-            → Nested Loop
-                → Index Only Scan using idx_flight_bookings_flight_booking on flight_bookings fb
-                      Index Cond: (flight_id = f.flight_id)
-                      Heap Fetches: 0                    ← zero heap access
-                      Buffers: shared hit=2176
+        ->  Index Only Scan using idx_flight_bookings_flight_booking on flight_bookings fb (actual time=0.001..0.001 rows=6.64 loops=720)
+              Index Cond: (flight_id = f.flight_id)
+Execution Time: 5.681 ms
+```
+The correlated subquery runs once per June flight (720 times). Before, each run scanned all 84,899 flight bookings; after, each run is a single index lookup.
+
+### R23: 4.045 → 0.028 ms (144.5×)
+
+```
+-- before
+Seq Scan on customers (actual time=0.098..4.068 rows=1 loops=1)
+  Filter: (lower(email) = 'siddharth.sharma1021@rediffmail.com'::text)
+  Rows Removed by Filter: 39999
+-- after
+Bitmap Heap Scan on customers (actual time=0.007..0.007 rows=1 loops=1)
+  ->  Bitmap Index Scan on idx_customers_lower_email
+        Index Cond: (lower(email) = 'siddharth.sharma1021@rediffmail.com'::text)
 ```
 
-Buffer hits reduced from 527,878 → 16,694 (97% reduction).
+### R11: 4.805 → 0.041 ms (117.2×)
 
-### R11: 15.2 ms → 0.044 ms (344.3×)
-
-**Before** — Parallel Seq Scan reads all 144,792 bookings:
 ```
-Gather Merge (actual time=10.187..11.338 rows=92)
-  Workers Planned: 1; Workers Launched: 1
-  → Parallel Seq Scan on bookings (actual time=7.011..7.018 rows=46 loops=2)
-        Filter: (status = 'PENDING_PAYMENT' AND booked_at < ...)
-        Rows Removed by Filter: 72350
-        Buffers: shared hit=2049
+-- before
+Gather Merge  ->  Parallel Seq Scan on bookings (rows=46 loops=2)
+      Filter: ((status = 'PENDING_PAYMENT') AND (booked_at < ...))
+      Rows Removed by Filter: 72350
+-- after
+Index Scan using idx_bookings_pending_booking_id on bookings (rows=92 loops=1)
+  Filter: (booked_at < ...)   Rows Removed by Filter: 5
 ```
 
-**After** — Partial index reads only the 97 qualifying rows:
-```
-Sort (actual time=0.063..0.067 rows=92)
-  → Index Scan using idx_bookings_pending_booking_id on bookings
-        Filter: (booked_at < ...)
-        Rows Removed by Filter: 5
-        Buffers: shared hit=3                             ← 3 pages vs 2,049
-```
+### W02: 9.781 → 0.169 ms (57.9×)
 
-### R13: 155.2 ms → 7.9 ms (19.5×)
+```
+-- before: min(booking_id) WHERE status = 'PENDING_PAYMENT'
+->  Index Scan using bookings_pkey on bookings bookings_1 (actual time=9.624..9.624 rows=1)
+      Filter: (status = 'PENDING_PAYMENT'::text)
+      Rows Removed by Filter: 144695
+-- after
+->  Index Only Scan using idx_bookings_pending_booking_id on bookings bookings_1 (actual time=0.011..0.011 rows=1)
+```
+Before, PostgreSQL walked the primary key in order until it reached the first pending booking, near the end of the table. The partial index contains only pending bookings, so its first entry is the answer.
 
-**Before (original NOT IN)** — full table scan plus NULL suppression:
-```
-Seq Scan on bookings b (rows=144792)
-→ 0 rows returned (WRONG — NULLs make NOT IN always UNKNOWN)
-```
+### R07: 2.231 → 0.097 ms (22.9×)
 
-**After (NOT EXISTS)** — Hash Anti Join correctly returns 10 rows:
 ```
-Hash Anti Join (actual time=21.923..23.657 rows=10)
-  Hash Cond: (c.coupon_code = b.coupon_code)
-  → Seq Scan on coupons c (rows=30)
-  → Hash (rows=17648)                                    ← only non-NULL coupon_codes hash
-```
-
-### R20: 13.1 ms → 1.0 ms (12.6×)
-
-**Before** — `::date` cast forces Parallel Seq Scan on all 2,049 pages:
-```
-Parallel Seq Scan on bookings (actual time=7.995..9.007 rows=3964 loops=2)
-  Filter: ((booked_at)::date >= '2026-06-01' AND (booked_at)::date <= '2026-06-30')
-  Rows Removed by Filter: 68432
-  Buffers: shared hit=2049
+-- before
+->  Seq Scan on flight_bookings fb (actual time=1.822..2.049 rows=9 loops=1)
+      Filter: (flight_id = 13047)
+      Rows Removed by Filter: 84890
+-- after
+->  Index Only Scan using idx_flight_bookings_flight_booking on flight_bookings fb (actual time=0.008..0.017 rows=9 loops=1)
+      Index Cond: (flight_id = 13047)
 ```
 
-**After** — Sargable TIMESTAMPTZ range enables Index Only Scan:
-```
-Index Only Scan using idx_bookings_booked_at_desc on bookings
-  Index Cond: (booked_at >= '2026-06-01' AND booked_at < '2026-07-01')
-  Heap Fetches: 0
-  Buffers: shared hit=25                                  ← 25 pages vs 2,049
-```
+## 9. Options tested and rejected
 
-### R18: 6.3 ms → 1.5 ms (4.3×)
+These were measured in a side test (median of 7 runs, same machine) and left out because the gain did not justify the extra index or the change.
 
-**Before** — Seq Scan evaluates ILIKE on all 15,913 reviews:
-```
-Seq Scan on hotel_reviews r (actual time=0.005..5.221 rows=2176)
-  Filter: (review_text ~~* '%breakfast%')
-  Rows Removed by Filter: 13737
-  Buffers: shared hit=200
-```
+| Query | Option | Result | Decision |
+|---|---|---|---|
+| R22 | Replace `idx_bookings_booked_at_desc` with a covering `(booked_at DESC) INCLUDE (booking_id, booking_ref, booking_type, status, total_amount)` | R22 8.8 → 5.9 ms, but R20 4.4 → 6.6 ms; index 10 MB vs 3.1 MB, on the most-written table | Rejected: net ≈ 0.7 ms for +7 MB and more write cost |
+| R22 | Keyset pagination | Needs the last `booked_at` of page 4,000 as input; the query as specified only has the offset | Not applicable without changing the query's input |
+| R24 | `hotel_reviews (hotel_id) INCLUDE (rating)` + `hotels (city_name)` | 1.45 → 1.35 ms | Rejected: 0.1 ms for two indexes |
+| R21 | Covering `flights (departure_at) INCLUDE (flight_id, origin, destination)` | 12.7 → 12.2 ms | Rejected: within noise |
+| R21 | Pre-aggregate seniors per booking before joining | 12.6 → 15.1 ms (slower) | Rejected |
+| all | `VACUUM ANALYZE` after loading (sets the visibility map) | No measurable change for R21/R22/R24 | Not added |
 
-**After** — GIN trigram index finds matching rows directly:
-```
-Bitmap Heap Scan on hotel_reviews r (actual time=0.384..1.833 rows=2176)
-  Recheck Cond: (review_text ~~* '%breakfast%')
-  → Bitmap Index Scan on idx_hotel_reviews_text_trgm (actual time=0.358 rows=2176)
-      Buffers: shared hit=16
-```
+**R17 note:** `idx_bookings_completed_date_customer` was designed to give R17 an Index Only Scan. On a freshly loaded table the visibility map is not set, so an index-only scan would still visit the heap. The planner therefore picks the smaller `idx_bookings_booked_at_desc`, and R17 improves 16.668 → 13.195 ms through that index instead. The covering index is kept, since it is expected to win once autovacuum has set the visibility map on `bookings`. That was not measured here, and this run shows no benefit from it.
 
-## 7. Write overhead
+## 10. Write overhead
 
-| Write query | Before (ms) | After (ms) | Change | Affected indexes | Acceptable? |
-|-------------|------------:|------------|--------|------------------|-------------|
-| W01 (INSERT booking) | 0.364 | 0.465 | +28% (+0.1 ms) | `idx_bookings_booked_at_desc` updated | ✅ Yes — 0.1 ms is negligible; the index saves 12× on R20 and 3.8× on R22 |
-| W02 (UPDATE pending → confirmed) | 9.741 | 0.221 | −97.7% (44× faster) | `idx_bookings_pending_booking_id` used for lookup | ✅ Yes — massive improvement |
-| W03 (CANCEL booking) | 0.166 | 0.195 | +17% (+0.03 ms) | Minor overhead from index maintenance | ✅ Yes — 0.03 ms is negligible |
-| W04 (UPDATE flight status) | 0.953 | 1.007 | +6% (+0.05 ms) | Minor overhead | ✅ Yes — 0.05 ms is negligible |
-| W05 (Assign room numbers) | 2.537 | 0.822 | −67.6% (3.1× faster) | `idx_hotel_bookings_unassigned_checkin` used for lookup | ✅ Yes — significant improvement |
+- **W01** (INSERT into `bookings`): 0.349 → 0.384 ms. The runs overlap, so this is not a measurable slowdown, but it is the expected direction: `bookings` now has three more indexes, and a new pending row is added to two of them (`idx_bookings_booked_at_desc`, `idx_bookings_pending_booking_id`).
+- **W03**: 0.155 → 0.165 ms, overlapping runs; no measurable change.
+- **W02, W04, W05** got much faster. Their cost was finding the rows, and the partial indexes make that cheap. Index maintenance on the 1–89 changed rows is included in the "after" times.
 
-The write regressions on W01, W03, and W04 are under 0.1 ms each — well within measurement noise. The read improvements they enable (R20: 12×, R22: 3.8×, R11: 344×) far outweigh these costs.
+## 11. Queries not sped up, and why
 
-## 8. Index storage
+- **R02, R03, R06, W03**: already sub-millisecond, or already using a unique index.
+- **R04, R05**: a few ms of seq scan on one table. An index on `bookings(customer_id)` (R05) or `hotel_bookings(hotel_id, …)` (R04) might help, but was not tested. Those queries belong to other members and are unchanged.
+- **R12, R14, R15, R16**: reports that aggregate most of a table, where hash joins over seq scans are the right plan. R12 could be made sargable (`booked_at >= '2026-01-01' AND booked_at < '2027-01-01'` instead of `EXTRACT(YEAR …)`), but it still reads most rows. Their small measured differences come with identical plans and are not claimed as improvements.
+- **R24**: only 1.6 ms on small inputs; candidate indexes gave about 0.1 ms (§9).
 
-| Index | Index size | Table size | Ratio | Notes |
-|-------|-----------|------------|-------|-------|
-| `idx_flight_bookings_flight_booking` | 2.6 MB | 5.6 MB | 46% | Covers 5 queries (R07, R08, R14, R16, R19) |
-| `idx_bookings_completed_date_customer` | 5.2 MB | 16 MB | 32% | Partial (27% of rows) + covering |
-| `idx_bookings_booked_at_desc` | 3.2 MB | 16 MB | 20% | Covers 4 queries (R09, R20, R22, R25) |
-| `idx_customers_lower_email` | 2.1 MB | 4.3 MB | 49% | Expression index; enables 141× speedup |
-| `idx_passengers_senior_booking` | 776 kB | 9.7 MB | 8% | Partial (age >= 60, ~8% of rows) |
-| `idx_hotel_reviews_text_trgm` | 504 kB | 1.6 MB | 32% | GIN trigram; only way to index ILIKE |
-| `idx_hotel_bookings_unassigned_checkin` | 232 kB | 4.4 MB | 5% | Partial (room_number IS NULL) |
-| `idx_bookings_pending_booking_id` | 16 kB | 16 MB | 0.1% | Partial (97 rows); enables 344× speedup |
-| **Total** | **14.6 MB** | **73.3 MB** | **20%** | |
+## 12. CP2 baseline vs same-machine baseline
 
-The total index overhead of 14.6 MB (20% of table data) is modest and justified by the cumulative 94% reduction in total query execution time.
+`docs/03_baseline_timings.md` (CP2) reports the baseline from three different laptops. The same queries re-run on the machine used for this report:
 
-## 9. Queries not sped up (and why)
+| Query | CP2 avg (ms) | Same-machine baseline (ms) |
+|---|---:|---:|
+| R01 | 8.588 | 5.110 |
+| R02 | 0.853 | 0.737 |
+| R03 | 0.268 | 0.234 |
+| R04 | 2.360 | 1.998 |
+| R05 | 6.194 | 6.547 |
+| R06 | 0.037 | 0.026 |
+| R07 | 2.080 | 2.231 |
+| R08 | 6.937 | 5.897 |
+| R09 | 16.017 | 14.212 |
+| R10 | 0.676 | 0.677 |
+| R11 | 15.151 | 4.805 |
+| R12 | 32.013 | 24.079 |
+| R13 | 155.227 | 12.085 |
+| R14 | 70.712 | 28.383 |
+| R15 | 33.995 | 15.205 |
+| R16 | 134.060 | 62.806 |
+| R17 | 41.631 | 16.668 |
+| R18 | 6.289 | 2.127 |
+| R19 | 2867.697 | 1350.668 |
+| R20 | 13.101 | 7.157 |
+| R21 | 19.945 | 19.694 |
+| R22 | 33.906 | 36.843 |
+| R23 | 3.675 | 4.045 |
+| R24 | 1.607 | 1.629 |
+| R25 | 20.164 | 20.153 |
+| W01 | 0.364 | 0.349 |
+| W02 | 9.741 | 9.781 |
+| W03 | 0.166 | 0.155 |
+| W04 | 0.953 | 0.945 |
+| W05 | 2.537 | 2.512 |
+| **Total** | **3506.944** | **1657.758** |
 
-| Query | Before (ms) | After (ms) | Why no speedup |
-|-------|-------------|------------|----------------|
-| R02 | 0.853 | 0.918 | Already sub-ms. The flights table (3,000 rows) is small enough that a Seq Scan is faster than index overhead. |
-| R03 | 0.268 | 0.251 | The hotels table (3,000 rows) fits in a few pages. Any index would be slower due to random I/O. |
-| R04 | 2.360 | 2.489 | Filters by a single hotel_id (already indexed via FK). The join to hotel_bookings reads few rows. |
-| R06 | 0.037 | 0.036 | Already uses the unique index on `booking_ref`. Cannot be faster. |
-| R10 | 0.676 | 0.662 | The flights table is small. A partial index on `status = 'DELAYED'` would help only if delayed flights were rare; in this dataset the scan is already sub-ms. |
-| R12 | 32.013 | 23.488 | Full-year aggregation must read most of the 144,792 bookings. An index scan would cause more random I/O than the sequential scan it replaces. The 26% improvement comes from reduced parallelization overhead with warm caches. |
-| R24 | 1.607 | 1.581 | Small result set (Goa hotels with 5+ reviews). The hotel-review join on `hotel_id` is already efficient via the PK. |
+The CP2 total (3,506.944 ms) is about twice the same-machine baseline (1,657.758 ms); for example R19 2,867.697 vs 1,350.668 ms and R13 155.227 vs 12.085 ms. Comparing CP2 "before" numbers with "after" numbers from another laptop would overstate most improvements, so only same-machine pairs are used above.
 
-These queries cannot benefit from additional indexes without changing the data distribution or the query semantics. Adding indexes for sub-ms queries would increase write overhead without measurable read benefit.
-
-## 10. Validation and reproducibility
-
-The index script was successfully executed using:
+## 13. Reproduce
 
 ```bash
-psql -v ON_ERROR_STOP=1 -d capstone -f sql/05_indexes.sql
+createdb mmt
+psql -d mmt -f sql/01_schema.sql
+psql -d mmt -f sql/02_load_data.sql          # from the folder containing seed_data/
+./benchmarks/run_benchmark.sh mmt baseline_rerun 3 queries/workload_30.sql
+psql -d mmt -f sql/05_indexes.sql
+./benchmarks/run_benchmark.sh mmt optimized 3 sql/06_optimized_queries.sql
 ```
-
-PostgreSQL confirmed that the extension and indexes already existed and skipped recreating them. The script uses `IF NOT EXISTS`, making it safe to execute repeatedly.
-
-The final optimized benchmark was executed using:
-
-```bash
-./benchmarks/run_benchmark.sh capstone optimized 3 sql/06_optimized_queries.sql
-```
-
-The benchmark summaries are stored in:
-
-- `benchmarks/results/baseline/summary.csv`
-- `benchmarks/results/optimized/summary.csv`
-
-Raw optimized execution plans are stored in the optimized results directory.
-
-## 11. Conclusion
-
-The largest improvements were:
-
-- R19: 654.6× faster (composite index eliminated repeated sequential scans).
-- R11: 344.3× faster (partial index on rare status).
-- R23: 141.3× faster (expression index for case-insensitive lookup).
-- W02: 44.1× faster (partial index for pending payment lookup).
-- R13: 19.5× faster (NOT EXISTS rewrite fixed wrong answer and improved performance).
-- R20: 12.6× faster (sargable date range enabled Index Only Scan).
-
-8 indexes were created with a total storage cost of 14.6 MB (20% of table data). The total execution time for all 30 queries dropped from 3,522 ms to 212 ms — a 94% reduction.
-
-CP3 demonstrates that database optimization requires understanding query access patterns, data distribution, execution plans, and the trade-off between read performance and index-maintenance overhead. Targeted indexes and carefully chosen query rewrites produced substantial improvements without adding unnecessary indexes everywhere.
+(For this report, the database was rebuilt from scratch between the two benchmark runs, so the optimized run also started from a fresh load.)
