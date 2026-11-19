@@ -13,7 +13,6 @@
 SET search_path TO mmt;
 BEGIN;
 
-ROLLBACK;
 -- @R01
 -- Flight search: Delhi → Mumbai on 5 July 2026 with seats left
 SELECT f.flight_id, f.flight_no, f.departure_at, f.arrival_at, f.base_fare,
@@ -288,12 +287,16 @@ LIMIT 20;
 
 -- @R25
 -- Insights: last-minute flight bookings (made less than 24 hours before departure) in 2026
+-- Rewrite: departure_at - booked_at < 24h  ==>  departure_at < booked_at + 24h.
+-- Exactly equivalent (no extra "departure_at >= booked_at" guard, which would change
+-- the meaning if a booking were ever made after departure). The condition compares
+-- columns of two tables, so no index can apply it; the plan stays a hash join and the
+-- rewrite does not change the timing. idx_bookings_booked_at_desc serves the 2026 filter.
 SELECT b.booking_id, b.booked_at, f.departure_at, f.origin, f.destination
 FROM bookings b
 JOIN flight_bookings fb ON fb.booking_id = b.booking_id
 JOIN flights f          ON f.flight_id = fb.flight_id
-WHERE f.departure_at >= b.booked_at
-  AND f.departure_at < b.booked_at + interval '24 hours'
+WHERE f.departure_at < b.booked_at + interval '24 hours'
   AND b.booked_at >= '2026-01-01'
 ORDER BY b.booked_at DESC;
 
@@ -334,3 +337,6 @@ WHERE b.booking_id = hb.booking_id
   AND b.status = 'CONFIRMED'
   AND hb.check_in = '2026-07-01'
   AND hb.room_number IS NULL;
+
+-- @END
+ROLLBACK;

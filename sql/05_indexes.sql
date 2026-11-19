@@ -34,8 +34,9 @@ CREATE INDEX IF NOT EXISTS idx_hotel_reviews_text_trgm
 ON mmt.hotel_reviews USING gin (review_text gin_trgm_ops);
 
 -- R21: Partial B-tree on passengers(booking_id) WHERE age >= 60.
--- Only senior passengers are indexed (~8% of rows), keeping the index small (776 kB
--- vs 9.7 MB table). booking_id is the join column to flight_bookings.
+-- Only senior passengers are indexed (36,837 of 163,380 rows, ~23%), so the index is
+-- 776 kB vs the 10 MB table. booking_id is the join column to flight_bookings.
+-- Replaces the full Seq Scan on passengers; the flight_bookings/flights hash join remains.
 CREATE INDEX IF NOT EXISTS idx_passengers_senior_booking
 ON mmt.passengers (booking_id)
 WHERE age >= 60;
@@ -50,8 +51,9 @@ ON mmt.bookings (booked_at DESC);
 
 -- R23: Expression B-tree on customers(lower(email)).
 -- R23 filters WHERE lower(email) = '...'. Without this index PostgreSQL must seq-scan
--- all 50,000 customers and evaluate lower() on each row. The expression index
--- pre-computes lower(email), enabling a direct Index Scan (0.026 ms vs 3.675 ms).
+-- all 40,000 customers and evaluate lower() on each row. The expression index
+-- pre-computes lower(email), enabling a direct Index Scan. (The existing UNIQUE index on
+-- email cannot be used because the query compares lower(email), not email.)
 CREATE INDEX IF NOT EXISTS idx_customers_lower_email
 ON mmt.customers (lower(email));
 
@@ -72,3 +74,13 @@ WHERE status = 'PENDING_PAYMENT';
 CREATE INDEX IF NOT EXISTS idx_hotel_bookings_unassigned_checkin
 ON mmt.hotel_bookings (check_in, booking_id)
 WHERE room_number IS NULL;
+
+-- W04 (also R10): Partial B-tree on flights(departure_at) WHERE status IN ('SCHEDULED', 'DELAYED').
+-- W04 updates flights that are still SCHEDULED/DELAYED and departed before 1 July 2026.
+-- Only 754 of 13,848 flights have one of these statuses, so the partial index is tiny and
+-- replaces the Seq Scan on flights with an Index Scan on departure_at (range predicate).
+-- The predicate matches W04's IN list exactly; R10's status = 'DELAYED' is implied by it,
+-- so R10 can use it too. Rows leave the index when W04 sets them to DEPARTED.
+CREATE INDEX IF NOT EXISTS idx_flights_open_departure
+ON mmt.flights (departure_at)
+WHERE status IN ('SCHEDULED', 'DELAYED');
