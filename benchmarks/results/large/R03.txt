@@ -1,45 +1,45 @@
 === R03 run 1 ===
-Limit  (cost=2680.27..2680.30 rows=14 width=38) (actual time=3.651..3.652 rows=20.00 loops=1)
+Limit  (cost=2680.27..2680.30 rows=14 width=38) (actual time=5.259..5.261 rows=20.00 loops=1)
   Buffers: shared hit=3 read=1480
-  ->  Sort  (cost=2680.27..2680.30 rows=14 width=38) (actual time=3.650..3.651 rows=20.00 loops=1)
+  ->  Sort  (cost=2680.27..2680.30 rows=14 width=38) (actual time=5.258..5.259 rows=20.00 loops=1)
         Sort Key: user_rating DESC NULLS LAST
         Sort Method: top-N heapsort  Memory: 27kB
         Buffers: shared hit=3 read=1480
-        ->  Seq Scan on hotels  (cost=0.00..2680.00 rows=14 width=38) (actual time=0.040..3.480 rows=1920.00 loops=1)
+        ->  Seq Scan on hotels  (cost=0.00..2680.00 rows=14 width=38) (actual time=0.039..5.022 rows=1920.00 loops=1)
               Filter: ((star_rating >= 4) AND (city_name = 'Goa'::text) AND ((amenities ->> 'pool'::text) = 'true'::text))
               Rows Removed by Filter: 58080
               Buffers: shared read=1480
 Planning:
-  Buffers: shared hit=103 read=1
-Planning Time: 0.324 ms
-Execution Time: 3.664 ms
+  Buffers: shared hit=105 read=1
+Planning Time: 0.404 ms
+Execution Time: 5.276 ms
 === R03 run 2 ===
-Limit  (cost=2680.27..2680.30 rows=14 width=38) (actual time=3.986..3.987 rows=20.00 loops=1)
+Limit  (cost=2680.27..2680.30 rows=14 width=38) (actual time=5.344..5.345 rows=20.00 loops=1)
   Buffers: shared hit=1483
-  ->  Sort  (cost=2680.27..2680.30 rows=14 width=38) (actual time=3.985..3.985 rows=20.00 loops=1)
+  ->  Sort  (cost=2680.27..2680.30 rows=14 width=38) (actual time=5.343..5.343 rows=20.00 loops=1)
         Sort Key: user_rating DESC NULLS LAST
         Sort Method: top-N heapsort  Memory: 27kB
         Buffers: shared hit=1483
-        ->  Seq Scan on hotels  (cost=0.00..2680.00 rows=14 width=38) (actual time=0.009..3.807 rows=1920.00 loops=1)
+        ->  Seq Scan on hotels  (cost=0.00..2680.00 rows=14 width=38) (actual time=0.009..5.139 rows=1920.00 loops=1)
               Filter: ((star_rating >= 4) AND (city_name = 'Goa'::text) AND ((amenities ->> 'pool'::text) = 'true'::text))
               Rows Removed by Filter: 58080
               Buffers: shared hit=1480
 Planning:
   Buffers: shared hit=100
-Planning Time: 0.172 ms
-Execution Time: 3.998 ms
+Planning Time: 0.243 ms
+Execution Time: 5.360 ms
 === R03 run 3 ===
-Limit  (cost=2680.27..2680.30 rows=14 width=38) (actual time=3.751..3.752 rows=20.00 loops=1)
+Limit  (cost=2680.27..2680.30 rows=14 width=38) (actual time=4.811..4.812 rows=20.00 loops=1)
   Buffers: shared hit=1483
-  ->  Sort  (cost=2680.27..2680.30 rows=14 width=38) (actual time=3.750..3.750 rows=20.00 loops=1)
+  ->  Sort  (cost=2680.27..2680.30 rows=14 width=38) (actual time=4.810..4.810 rows=20.00 loops=1)
         Sort Key: user_rating DESC NULLS LAST
         Sort Method: top-N heapsort  Memory: 27kB
         Buffers: shared hit=1483
-        ->  Seq Scan on hotels  (cost=0.00..2680.00 rows=14 width=38) (actual time=0.006..3.597 rows=1920.00 loops=1)
+        ->  Seq Scan on hotels  (cost=0.00..2680.00 rows=14 width=38) (actual time=0.007..4.618 rows=1920.00 loops=1)
               Filter: ((star_rating >= 4) AND (city_name = 'Goa'::text) AND ((amenities ->> 'pool'::text) = 'true'::text))
               Rows Removed by Filter: 58080
               Buffers: shared hit=1480
 Planning:
   Buffers: shared hit=100
-Planning Time: 0.160 ms
-Execution Time: 3.762 ms
+Planning Time: 0.204 ms
+Execution Time: 4.825 ms
