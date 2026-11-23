@@ -1,0 +1,96 @@
+=== R05 run 1 ===
+Sort  (cost=60173.79..60173.79 rows=1 width=25) (actual time=47.957..48.872 rows=0.00 loops=1)
+  Sort Key: (COALESCE((f.departure_at)::date, hb.check_in))
+  Sort Method: quicksort  Memory: 25kB
+  Buffers: shared hit=7762 read=33289 written=34
+  ->  Nested Loop Left Join  (cost=1001.14..60173.78 rows=1 width=25) (actual time=47.950..48.865 rows=0.00 loops=1)
+        Buffers: shared hit=7759 read=33289 written=34
+        ->  Nested Loop Left Join  (cost=1000.71..60165.33 rows=1 width=37) (actual time=47.950..48.865 rows=0.00 loops=1)
+              Buffers: shared hit=7759 read=33289 written=34
+              ->  Nested Loop Left Join  (cost=1000.43..60165.03 rows=1 width=37) (actual time=47.950..48.865 rows=0.00 loops=1)
+                    Buffers: shared hit=7759 read=33289 written=34
+                    ->  Gather  (cost=1000.00..60156.58 rows=1 width=29) (actual time=47.950..48.864 rows=0.00 loops=1)
+                          Workers Planned: 2
+                          Workers Launched: 2
+                          Buffers: shared hit=7759 read=33289 written=34
+                          ->  Parallel Seq Scan on bookings b  (cost=0.00..59156.48 rows=1 width=29) (actual time=46.716..46.716 rows=0.00 loops=3)
+                                Filter: ((customer_id = 1021) AND (status = 'CONFIRMED'::text))
+                                Rows Removed by Filter: 965762
+                                Buffers: shared hit=7759 read=33289 written=34
+                    ->  Index Scan using flight_bookings_pkey on flight_bookings fb  (cost=0.43..8.45 rows=1 width=16) (never executed)
+                          Index Cond: (booking_id = b.booking_id)
+                          Index Searches: 0
+              ->  Index Scan using flights_pkey on flights f  (cost=0.29..0.30 rows=1 width=16) (never executed)
+                    Index Cond: (flight_id = fb.flight_id)
+                    Index Searches: 0
+        ->  Index Scan using hotel_bookings_booking_id_hotel_id_key on hotel_bookings hb  (cost=0.43..8.45 rows=1 width=12) (never executed)
+              Index Cond: (booking_id = b.booking_id)
+              Index Searches: 0
+Planning:
+  Buffers: shared hit=489
+Planning Time: 0.829 ms
+Execution Time: 48.901 ms
+=== R05 run 2 ===
+Sort  (cost=60173.79..60173.79 rows=1 width=25) (actual time=48.930..49.864 rows=0.00 loops=1)
+  Sort Key: (COALESCE((f.departure_at)::date, hb.check_in))
+  Sort Method: quicksort  Memory: 25kB
+  Buffers: shared hit=8044 read=33007 written=282
+  ->  Nested Loop Left Join  (cost=1001.14..60173.78 rows=1 width=25) (actual time=48.924..49.858 rows=0.00 loops=1)
+        Buffers: shared hit=8041 read=33007 written=282
+        ->  Nested Loop Left Join  (cost=1000.71..60165.33 rows=1 width=37) (actual time=48.924..49.857 rows=0.00 loops=1)
+              Buffers: shared hit=8041 read=33007 written=282
+              ->  Nested Loop Left Join  (cost=1000.43..60165.03 rows=1 width=37) (actual time=48.924..49.857 rows=0.00 loops=1)
+                    Buffers: shared hit=8041 read=33007 written=282
+                    ->  Gather  (cost=1000.00..60156.58 rows=1 width=29) (actual time=48.923..49.856 rows=0.00 loops=1)
+                          Workers Planned: 2
+                          Workers Launched: 2
+                          Buffers: shared hit=8041 read=33007 written=282
+                          ->  Parallel Seq Scan on bookings b  (cost=0.00..59156.48 rows=1 width=29) (actual time=47.674..47.674 rows=0.00 loops=3)
+                                Filter: ((customer_id = 1021) AND (status = 'CONFIRMED'::text))
+                                Rows Removed by Filter: 965762
+                                Buffers: shared hit=8041 read=33007 written=282
+                    ->  Index Scan using flight_bookings_pkey on flight_bookings fb  (cost=0.43..8.45 rows=1 width=16) (never executed)
+                          Index Cond: (booking_id = b.booking_id)
+                          Index Searches: 0
+              ->  Index Scan using flights_pkey on flights f  (cost=0.29..0.30 rows=1 width=16) (never executed)
+                    Index Cond: (flight_id = fb.flight_id)
+                    Index Searches: 0
+        ->  Index Scan using hotel_bookings_booking_id_hotel_id_key on hotel_bookings hb  (cost=0.43..8.45 rows=1 width=12) (never executed)
+              Index Cond: (booking_id = b.booking_id)
+              Index Searches: 0
+Planning:
+  Buffers: shared hit=485
+Planning Time: 0.774 ms
+Execution Time: 49.893 ms
+=== R05 run 3 ===
+Sort  (cost=60173.79..60173.79 rows=1 width=25) (actual time=47.231..48.157 rows=0.00 loops=1)
+  Sort Key: (COALESCE((f.departure_at)::date, hb.check_in))
+  Sort Method: quicksort  Memory: 25kB
+  Buffers: shared hit=8326 read=32725 written=182
+  ->  Nested Loop Left Join  (cost=1001.14..60173.78 rows=1 width=25) (actual time=47.226..48.152 rows=0.00 loops=1)
+        Buffers: shared hit=8323 read=32725 written=182
+        ->  Nested Loop Left Join  (cost=1000.71..60165.33 rows=1 width=37) (actual time=47.225..48.151 rows=0.00 loops=1)
+              Buffers: shared hit=8323 read=32725 written=182
+              ->  Nested Loop Left Join  (cost=1000.43..60165.03 rows=1 width=37) (actual time=47.225..48.151 rows=0.00 loops=1)
+                    Buffers: shared hit=8323 read=32725 written=182
+                    ->  Gather  (cost=1000.00..60156.58 rows=1 width=29) (actual time=47.225..48.151 rows=0.00 loops=1)
+                          Workers Planned: 2
+                          Workers Launched: 2
+                          Buffers: shared hit=8323 read=32725 written=182
+                          ->  Parallel Seq Scan on bookings b  (cost=0.00..59156.48 rows=1 width=29) (actual time=46.007..46.007 rows=0.00 loops=3)
+                                Filter: ((customer_id = 1021) AND (status = 'CONFIRMED'::text))
+                                Rows Removed by Filter: 965762
+                                Buffers: shared hit=8323 read=32725 written=182
+                    ->  Index Scan using flight_bookings_pkey on flight_bookings fb  (cost=0.43..8.45 rows=1 width=16) (never executed)
+                          Index Cond: (booking_id = b.booking_id)
+                          Index Searches: 0
+              ->  Index Scan using flights_pkey on flights f  (cost=0.29..0.30 rows=1 width=16) (never executed)
+                    Index Cond: (flight_id = fb.flight_id)
+                    Index Searches: 0
+        ->  Index Scan using hotel_bookings_booking_id_hotel_id_key on hotel_bookings hb  (cost=0.43..8.45 rows=1 width=12) (never executed)
+              Index Cond: (booking_id = b.booking_id)
+              Index Searches: 0
+Planning:
+  Buffers: shared hit=485
+Planning Time: 0.727 ms
+Execution Time: 48.184 ms

@@ -328,13 +328,14 @@ Also include:
 
 Your optimizations worked on 144,792 bookings. Next year the business expects **20× the volume**.
 
-By **Thu 19 Nov 2026**, faculty will release **`large_data.zip`**: the same 12 CSV files with about **20× the rows** (≈ 2,896,000 bookings, ≈ 3,268,000 passengers, ≈ 1,698,000 flight bookings, ≈ 1,198,000 hotel bookings, ≈ 800,000 customers). Until then, work on the design part of the report.
+The Phase 5 dataset is available from the [course release](https://github.com/edusatyaki/DBMS-MakeMyTrip-Travel-Booking/releases/download/large-data/large_data.zip) and the [project tracker](https://edusatyaki.github.io/dbms-project-tracker/) (team **T0111**). It contains the same 12 CSV tables as the seed data, with about **20× the rows** (≈ 2,897,285 bookings, ≈ 3,272,394 passengers, ≈ 1,698,936 flight bookings, ≈ 1,198,349 hotel bookings, and 800,000 customers). Keep the extracted `large_data/` directory local; it is excluded by `.gitignore`.
 
 ### 5.1 What to do with the large dataset
-1. Create a new database. Run **your** `01_schema.sql`, load `large_data/` with your load script (change the folder name only), then run **your** `05_indexes.sql` and `ANALYZE`.
-2. Run your **optimized** queries (`sql/06_optimized_queries.sql`). **Do not run the original 30 on the large data.** Some of them could run for a very long time.
+1. Create a separate database for the large data with `createdb mmt_large`. From the repository root, run `psql -d mmt_large -f sql/01_schema.sql`, then `psql -d mmt_large -f sql/03_load_large_data.sql`. The large-data loader is the seed loader with only the folder name changed; it loads the 12 tables, runs `ANALYZE`, and prints row counts. Then run `psql -d mmt_large -f sql/05_indexes.sql` and `psql -d mmt_large -c 'ANALYZE'`.
+2. Run your **optimized** queries (`sql/06_optimized_queries.sql`) three times each. **Do not run the original 30 on the large data.** Some of them could run for a very long time. The benchmark helper can run them with `./benchmarks/run_benchmark.sh mmt_large large 3 sql/06_optimized_queries.sql`.
    - R22 pages with `OFFSET`; if you replaced it with keyset pagination, explain how the "last seen" value is chosen for the large data.
 3. Record the times and compare with your Phase 4 results on the seed data.
+4. Run `psql -d mmt_large -f sql/08_partitioning.sql` for an isolated partitioning demonstration. It copies the booking columns needed for the demo into a separate schema and shows partition pruning; it does not repartition or alter the benchmark tables.
 
 | Query | Optimized on seed (ms) | Optimized on large (ms) | Growth (large ÷ seed) | Meets target? | If not, what you changed |
 |-------|------------------------:|------------------------:|----------------------:|:-------------:|--------------------------|

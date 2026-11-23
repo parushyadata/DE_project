@@ -1,0 +1,84 @@
+=== R19 run 1 ===
+Sort  (cost=914706.55..914708.34 rows=718 width=31) (actual time=216.775..216.787 rows=720.00 loops=1)
+  Sort Key: ((SubPlan 1)) DESC, f.departure_at
+  Sort Method: quicksort  Memory: 58kB
+  Buffers: shared hit=458002 read=8629
+  ->  Seq Scan on flights f  (cost=0.00..914672.48 rows=718 width=31) (actual time=15.387..216.643 rows=720.00 loops=1)
+        Filter: ((departure_at >= '2026-06-01 00:00:00+05:30'::timestamp with time zone) AND (departure_at < '2026-07-01 00:00:00+05:30'::timestamp with time zone))
+        Rows Removed by Filter: 13128
+        Buffers: shared hit=457996 read=8629
+        SubPlan 1
+          ->  Aggregate  (cost=1273.38..1273.39 rows=1 width=8) (actual time=0.300..0.300 rows=1.00 loops=720)
+                Buffers: shared hit=457822 read=8629
+                ->  Nested Loop  (cost=0.86..1272.76 rows=245 width=0) (actual time=0.005..0.295 rows=250.64 loops=720)
+                      Buffers: shared hit=457822 read=8629
+                      ->  Index Only Scan using idx_flight_bookings_flight_booking on flight_bookings fb  (cost=0.43..78.17 rows=127 width=8) (actual time=0.002..0.036 rows=130.39 loops=720)
+                            Index Cond: (flight_id = f.flight_id)
+                            Heap Fetches: 93883
+                            Index Searches: 720
+                            Buffers: shared hit=87573 read=2678
+                      ->  Index Only Scan using passengers_pkey on passengers p  (cost=0.43..9.39 rows=2 width=8) (actual time=0.002..0.002 rows=1.92 loops=93883)
+                            Index Cond: (booking_id = fb.booking_id)
+                            Heap Fetches: 180463
+                            Index Searches: 93883
+                            Buffers: shared hit=370249 read=5951
+Planning:
+  Buffers: shared hit=214 read=25
+Planning Time: 1.769 ms
+Execution Time: 216.829 ms
+=== R19 run 2 ===
+Sort  (cost=914706.55..914708.34 rows=718 width=31) (actual time=122.816..122.830 rows=720.00 loops=1)
+  Sort Key: ((SubPlan 1)) DESC, f.departure_at
+  Sort Method: quicksort  Memory: 58kB
+  Buffers: shared hit=466631
+  ->  Seq Scan on flights f  (cost=0.00..914672.48 rows=718 width=31) (actual time=0.856..122.685 rows=720.00 loops=1)
+        Filter: ((departure_at >= '2026-06-01 00:00:00+05:30'::timestamp with time zone) AND (departure_at < '2026-07-01 00:00:00+05:30'::timestamp with time zone))
+        Rows Removed by Filter: 13128
+        Buffers: shared hit=466625
+        SubPlan 1
+          ->  Aggregate  (cost=1273.38..1273.39 rows=1 width=8) (actual time=0.169..0.169 rows=1.00 loops=720)
+                Buffers: shared hit=466451
+                ->  Nested Loop  (cost=0.86..1272.76 rows=245 width=0) (actual time=0.003..0.164 rows=250.64 loops=720)
+                      Buffers: shared hit=466451
+                      ->  Index Only Scan using idx_flight_bookings_flight_booking on flight_bookings fb  (cost=0.43..78.17 rows=127 width=8) (actual time=0.002..0.030 rows=130.39 loops=720)
+                            Index Cond: (flight_id = f.flight_id)
+                            Heap Fetches: 93883
+                            Index Searches: 720
+                            Buffers: shared hit=90251
+                      ->  Index Only Scan using passengers_pkey on passengers p  (cost=0.43..9.39 rows=2 width=8) (actual time=0.001..0.001 rows=1.92 loops=93883)
+                            Index Cond: (booking_id = fb.booking_id)
+                            Heap Fetches: 180463
+                            Index Searches: 93883
+                            Buffers: shared hit=376200
+Planning:
+  Buffers: shared hit=239
+Planning Time: 0.471 ms
+Execution Time: 122.871 ms
+=== R19 run 3 ===
+Sort  (cost=914706.55..914708.34 rows=718 width=31) (actual time=121.444..121.457 rows=720.00 loops=1)
+  Sort Key: ((SubPlan 1)) DESC, f.departure_at
+  Sort Method: quicksort  Memory: 58kB
+  Buffers: shared hit=466631
+  ->  Seq Scan on flights f  (cost=0.00..914672.48 rows=718 width=31) (actual time=0.846..121.317 rows=720.00 loops=1)
+        Filter: ((departure_at >= '2026-06-01 00:00:00+05:30'::timestamp with time zone) AND (departure_at < '2026-07-01 00:00:00+05:30'::timestamp with time zone))
+        Rows Removed by Filter: 13128
+        Buffers: shared hit=466625
+        SubPlan 1
+          ->  Aggregate  (cost=1273.38..1273.39 rows=1 width=8) (actual time=0.168..0.168 rows=1.00 loops=720)
+                Buffers: shared hit=466451
+                ->  Nested Loop  (cost=0.86..1272.76 rows=245 width=0) (actual time=0.003..0.163 rows=250.64 loops=720)
+                      Buffers: shared hit=466451
+                      ->  Index Only Scan using idx_flight_bookings_flight_booking on flight_bookings fb  (cost=0.43..78.17 rows=127 width=8) (actual time=0.002..0.030 rows=130.39 loops=720)
+                            Index Cond: (flight_id = f.flight_id)
+                            Heap Fetches: 93883
+                            Index Searches: 720
+                            Buffers: shared hit=90251
+                      ->  Index Only Scan using passengers_pkey on passengers p  (cost=0.43..9.39 rows=2 width=8) (actual time=0.001..0.001 rows=1.92 loops=93883)
+                            Index Cond: (booking_id = fb.booking_id)
+                            Heap Fetches: 180463
+                            Index Searches: 93883
+                            Buffers: shared hit=376200
+Planning:
+  Buffers: shared hit=239
+Planning Time: 0.468 ms
+Execution Time: 121.497 ms
