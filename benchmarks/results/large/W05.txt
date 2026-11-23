@@ -1,9 +1,9 @@
 === W05 run 1 ===
-Update on hotel_bookings hb  (cost=0.85..2327.94 rows=0 width=0) (actual time=117.723..117.724 rows=0.00 loops=1)
-  Buffers: shared hit=25370 read=3177 dirtied=1687
-  ->  Nested Loop  (cost=0.85..2327.94 rows=8 width=44) (actual time=0.334..14.298 rows=1681.00 loops=1)
-        Buffers: shared hit=5996 read=2333
-        ->  Index Scan using idx_hotel_bookings_unassigned_checkin on hotel_bookings hb  (cost=0.42..413.26 rows=228 width=14) (actual time=0.228..2.630 rows=1859.00 loops=1)
+Update on hotel_bookings hb  (cost=0.85..2338.17 rows=0 width=0) (actual time=92.987..92.987 rows=0.00 loops=1)
+  Buffers: shared hit=26146 read=3250 dirtied=1688
+  ->  Nested Loop  (cost=0.85..2338.17 rows=8 width=44) (actual time=0.369..14.894 rows=1681.00 loops=1)
+        Buffers: shared hit=5924 read=2405
+        ->  Index Scan using idx_hotel_bookings_unassigned_checkin on hotel_bookings hb  (cost=0.42..415.04 rows=229 width=14) (actual time=0.198..2.901 rows=1859.00 loops=1)
               Index Cond: (check_in = '2026-07-01'::date)
               Filter: (room_number IS NULL)
               Index Searches: 1
@@ -13,17 +13,17 @@ Update on hotel_bookings hb  (cost=0.85..2327.94 rows=0 width=0) (actual time=11
               Filter: (status = 'CONFIRMED'::text)
               Rows Removed by Filter: 0
               Index Searches: 1859
-              Buffers: shared hit=5995 read=1441
+              Buffers: shared hit=5923 read=1513
 Planning:
-  Buffers: shared hit=343 read=13 dirtied=1
-Planning Time: 1.016 ms
-Execution Time: 117.767 ms
+  Buffers: shared hit=339 read=14 dirtied=1
+Planning Time: 1.943 ms
+Execution Time: 93.044 ms
 === W05 run 2 ===
-Update on hotel_bookings hb  (cost=0.85..2327.94 rows=0 width=0) (actual time=10.114..10.115 rows=0.00 loops=1)
+Update on hotel_bookings hb  (cost=0.85..2338.17 rows=0 width=0) (actual time=9.754..9.755 rows=0.00 loops=1)
   Buffers: shared hit=31903 read=11 dirtied=18 written=5
-  ->  Nested Loop  (cost=0.85..2327.94 rows=8 width=44) (actual time=0.018..4.777 rows=1681.00 loops=1)
+  ->  Nested Loop  (cost=0.85..2338.17 rows=8 width=44) (actual time=0.017..4.678 rows=1681.00 loops=1)
         Buffers: shared hit=8329
-        ->  Index Scan using idx_hotel_bookings_unassigned_checkin on hotel_bookings hb  (cost=0.42..413.26 rows=228 width=14) (actual time=0.009..1.510 rows=1859.00 loops=1)
+        ->  Index Scan using idx_hotel_bookings_unassigned_checkin on hotel_bookings hb  (cost=0.42..415.04 rows=229 width=14) (actual time=0.009..1.518 rows=1859.00 loops=1)
               Index Cond: (check_in = '2026-07-01'::date)
               Filter: (room_number IS NULL)
               Index Searches: 1
@@ -36,14 +36,14 @@ Update on hotel_bookings hb  (cost=0.85..2327.94 rows=0 width=0) (actual time=10
               Buffers: shared hit=7436
 Planning:
   Buffers: shared hit=353
-Planning Time: 0.503 ms
-Execution Time: 10.155 ms
+Planning Time: 0.541 ms
+Execution Time: 9.796 ms
 === W05 run 3 ===
-Update on hotel_bookings hb  (cost=0.85..2327.94 rows=0 width=0) (actual time=9.923..9.923 rows=0.00 loops=1)
+Update on hotel_bookings hb  (cost=0.85..2338.17 rows=0 width=0) (actual time=9.941..9.941 rows=0.00 loops=1)
   Buffers: shared hit=31886 dirtied=16 written=16
-  ->  Nested Loop  (cost=0.85..2327.94 rows=8 width=44) (actual time=0.017..4.645 rows=1681.00 loops=1)
+  ->  Nested Loop  (cost=0.85..2338.17 rows=8 width=44) (actual time=0.016..4.748 rows=1681.00 loops=1)
         Buffers: shared hit=8329
-        ->  Index Scan using idx_hotel_bookings_unassigned_checkin on hotel_bookings hb  (cost=0.42..413.26 rows=228 width=14) (actual time=0.008..1.481 rows=1859.00 loops=1)
+        ->  Index Scan using idx_hotel_bookings_unassigned_checkin on hotel_bookings hb  (cost=0.42..415.04 rows=229 width=14) (actual time=0.009..1.548 rows=1859.00 loops=1)
               Index Cond: (check_in = '2026-07-01'::date)
               Filter: (room_number IS NULL)
               Index Searches: 1
@@ -56,5 +56,5 @@ Update on hotel_bookings hb  (cost=0.85..2327.94 rows=0 width=0) (actual time=9.
               Buffers: shared hit=7436
 Planning:
   Buffers: shared hit=353
-Planning Time: 0.493 ms
-Execution Time: 9.962 ms
+Planning Time: 0.540 ms
+Execution Time: 9.983 ms
