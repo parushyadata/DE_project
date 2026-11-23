@@ -1,0 +1,63 @@
+=== W02 run 1 ===
+Update on bookings  (cost=0.77..8.78 rows=0 width=0) (actual time=0.742..0.742 rows=0.00 loops=1)
+  Buffers: shared hit=47 read=8 dirtied=5
+  InitPlan 2
+    ->  Result  (cost=0.33..0.34 rows=1 width=8) (actual time=0.015..0.015 rows=1.00 loops=1)
+          Buffers: shared hit=1 read=2
+          InitPlan 1
+            ->  Limit  (cost=0.28..0.33 rows=1 width=8) (actual time=0.015..0.015 rows=1.00 loops=1)
+                  Buffers: shared hit=1 read=2
+                  ->  Index Only Scan using idx_bookings_pending_booking_id on bookings bookings_1  (cost=0.28..98.16 rows=2125 width=8) (actual time=0.014..0.014 rows=1.00 loops=1)
+                        Heap Fetches: 1
+                        Index Searches: 1
+                        Buffers: shared hit=1 read=2
+  ->  Index Scan using bookings_pkey on bookings  (cost=0.43..8.45 rows=1 width=38) (actual time=0.171..0.172 rows=1.00 loops=1)
+        Index Cond: (booking_id = (InitPlan 2).col1)
+        Index Searches: 1
+        Buffers: shared hit=4 read=3
+Planning:
+  Buffers: shared hit=170 read=1
+Planning Time: 0.328 ms
+Execution Time: 1.168 ms
+=== W02 run 2 ===
+Update on bookings  (cost=0.77..8.78 rows=0 width=0) (actual time=0.175..0.176 rows=0.00 loops=1)
+  Buffers: shared hit=58 read=1 dirtied=1
+  InitPlan 2
+    ->  Result  (cost=0.33..0.34 rows=1 width=8) (actual time=0.013..0.014 rows=1.00 loops=1)
+          Buffers: shared hit=3
+          InitPlan 1
+            ->  Limit  (cost=0.28..0.33 rows=1 width=8) (actual time=0.013..0.013 rows=1.00 loops=1)
+                  Buffers: shared hit=3
+                  ->  Index Only Scan using idx_bookings_pending_booking_id on bookings bookings_1  (cost=0.28..98.16 rows=2125 width=8) (actual time=0.012..0.012 rows=1.00 loops=1)
+                        Heap Fetches: 1
+                        Index Searches: 1
+                        Buffers: shared hit=3
+  ->  Index Scan using bookings_pkey on bookings  (cost=0.43..8.45 rows=1 width=38) (actual time=0.028..0.029 rows=1.00 loops=1)
+        Index Cond: (booking_id = (InitPlan 2).col1)
+        Index Searches: 1
+        Buffers: shared hit=9
+Planning:
+  Buffers: shared hit=171
+Planning Time: 0.357 ms
+Execution Time: 0.221 ms
+=== W02 run 3 ===
+Update on bookings  (cost=0.77..8.78 rows=0 width=0) (actual time=2.201..2.201 rows=0.00 loops=1)
+  Buffers: shared hit=58 read=1 dirtied=1
+  InitPlan 2
+    ->  Result  (cost=0.33..0.34 rows=1 width=8) (actual time=0.013..0.013 rows=1.00 loops=1)
+          Buffers: shared hit=3
+          InitPlan 1
+            ->  Limit  (cost=0.28..0.33 rows=1 width=8) (actual time=0.012..0.012 rows=1.00 loops=1)
+                  Buffers: shared hit=3
+                  ->  Index Only Scan using idx_bookings_pending_booking_id on bookings bookings_1  (cost=0.28..98.16 rows=2125 width=8) (actual time=0.012..0.012 rows=1.00 loops=1)
+                        Heap Fetches: 1
+                        Index Searches: 1
+                        Buffers: shared hit=3
+  ->  Index Scan using bookings_pkey on bookings  (cost=0.43..8.45 rows=1 width=38) (actual time=0.028..0.030 rows=1.00 loops=1)
+        Index Cond: (booking_id = (InitPlan 2).col1)
+        Index Searches: 1
+        Buffers: shared hit=9
+Planning:
+  Buffers: shared hit=171
+Planning Time: 0.300 ms
+Execution Time: 2.244 ms

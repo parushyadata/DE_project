@@ -1,0 +1,30 @@
+=== R10 run 1 ===
+Index Scan using idx_flights_open_departure on flights  (cost=0.28..46.47 rows=6 width=31) (actual time=0.007..0.071 rows=6.00 loops=1)
+  Filter: (status = 'DELAYED'::text)
+  Rows Removed by Filter: 748
+  Index Searches: 1
+  Buffers: shared hit=35
+Planning:
+  Buffers: shared hit=175
+Planning Time: 0.248 ms
+Execution Time: 0.079 ms
+=== R10 run 2 ===
+Index Scan using idx_flights_open_departure on flights  (cost=0.28..46.47 rows=6 width=31) (actual time=0.008..0.073 rows=6.00 loops=1)
+  Filter: (status = 'DELAYED'::text)
+  Rows Removed by Filter: 748
+  Index Searches: 1
+  Buffers: shared hit=35
+Planning:
+  Buffers: shared hit=175
+Planning Time: 0.248 ms
+Execution Time: 0.081 ms
+=== R10 run 3 ===
+Index Scan using idx_flights_open_departure on flights  (cost=0.28..46.47 rows=6 width=31) (actual time=0.007..0.072 rows=6.00 loops=1)
+  Filter: (status = 'DELAYED'::text)
+  Rows Removed by Filter: 748
+  Index Searches: 1
+  Buffers: shared hit=35
+Planning:
+  Buffers: shared hit=175
+Planning Time: 0.245 ms
+Execution Time: 0.080 ms

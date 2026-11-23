@@ -1,0 +1,57 @@
+=== R13 run 1 ===
+Sort  (cost=99117.70..99117.73 rows=10 width=20) (actual time=172.386..172.387 rows=10.00 loops=1)
+  Sort Key: c.coupon_code
+  Sort Method: quicksort  Memory: 25kB
+  Buffers: shared hit=9426 read=31626
+  ->  Hash Right Anti Join  (cost=1.68..99117.53 rows=10 width=20) (actual time=172.364..172.367 rows=10.00 loops=1)
+        Hash Cond: (b.coupon_code = c.coupon_code)
+        Buffers: shared hit=9423 read=31626
+        ->  Seq Scan on bookings b  (cost=0.00..70021.57 rows=2897357 width=10) (actual time=0.014..88.935 rows=2897285.00 loops=1)
+              Buffers: shared hit=9422 read=31626
+        ->  Hash  (cost=1.30..1.30 rows=30 width=20) (actual time=0.009..0.009 rows=30.00 loops=1)
+              Buckets: 1024  Batches: 1  Memory Usage: 10kB
+              Buffers: shared hit=1
+              ->  Seq Scan on coupons c  (cost=0.00..1.30 rows=30 width=20) (actual time=0.002..0.003 rows=30.00 loops=1)
+                    Buffers: shared hit=1
+Planning:
+  Buffers: shared hit=209 read=3
+Planning Time: 0.633 ms
+Execution Time: 172.415 ms
+=== R13 run 2 ===
+Sort  (cost=99117.70..99117.73 rows=10 width=20) (actual time=174.383..174.384 rows=10.00 loops=1)
+  Sort Key: c.coupon_code
+  Sort Method: quicksort  Memory: 25kB
+  Buffers: shared hit=9520 read=31532
+  ->  Hash Right Anti Join  (cost=1.68..99117.53 rows=10 width=20) (actual time=174.361..174.364 rows=10.00 loops=1)
+        Hash Cond: (b.coupon_code = c.coupon_code)
+        Buffers: shared hit=9517 read=31532
+        ->  Seq Scan on bookings b  (cost=0.00..70021.57 rows=2897357 width=10) (actual time=0.835..90.824 rows=2897285.00 loops=1)
+              Buffers: shared hit=9516 read=31532
+        ->  Hash  (cost=1.30..1.30 rows=30 width=20) (actual time=0.008..0.009 rows=30.00 loops=1)
+              Buckets: 1024  Batches: 1  Memory Usage: 10kB
+              Buffers: shared hit=1
+              ->  Seq Scan on coupons c  (cost=0.00..1.30 rows=30 width=20) (actual time=0.002..0.003 rows=30.00 loops=1)
+                    Buffers: shared hit=1
+Planning:
+  Buffers: shared hit=210
+Planning Time: 0.354 ms
+Execution Time: 174.410 ms
+=== R13 run 3 ===
+Sort  (cost=99117.70..99117.73 rows=10 width=20) (actual time=174.184..174.185 rows=10.00 loops=1)
+  Sort Key: c.coupon_code
+  Sort Method: quicksort  Memory: 25kB
+  Buffers: shared hit=9614 read=31438
+  ->  Hash Right Anti Join  (cost=1.68..99117.53 rows=10 width=20) (actual time=174.162..174.165 rows=10.00 loops=1)
+        Hash Cond: (b.coupon_code = c.coupon_code)
+        Buffers: shared hit=9611 read=31438
+        ->  Seq Scan on bookings b  (cost=0.00..70021.57 rows=2897357 width=10) (actual time=0.448..89.781 rows=2897285.00 loops=1)
+              Buffers: shared hit=9610 read=31438
+        ->  Hash  (cost=1.30..1.30 rows=30 width=20) (actual time=0.008..0.009 rows=30.00 loops=1)
+              Buckets: 1024  Batches: 1  Memory Usage: 10kB
+              Buffers: shared hit=1
+              ->  Seq Scan on coupons c  (cost=0.00..1.30 rows=30 width=20) (actual time=0.002..0.003 rows=30.00 loops=1)
+                    Buffers: shared hit=1
+Planning:
+  Buffers: shared hit=210
+Planning Time: 0.355 ms
+Execution Time: 174.212 ms
